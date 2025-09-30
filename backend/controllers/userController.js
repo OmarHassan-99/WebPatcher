@@ -12,7 +12,7 @@ export async function signup(req, res) {
   const password = trimInput(req.body.password);
 
   try {
-    if (!name.trim() || !email || !password.trim()) {
+    if (!name || !email || !password) {
       return res.status(400).json({
         success: false,
         message: "Please fill in all fields.",
