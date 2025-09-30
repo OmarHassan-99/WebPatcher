@@ -2,27 +2,49 @@ import User from "../models/userModel.js";
 import bcrypt from "bcrypt";
 import validator from "validator";
 
+function trimInput(input) {
+  return typeof input === "string" ? input.trim() : "";
+}
+
 export async function signup(req, res) {
-  const { name, email, password } = req.body;
+  const name = trimInput(req.body.name);
+  const email = trimInput(req.body.email);
+  const password = trimInput(req.body.password);
 
   try {
-    if (!name || !email || !password) {
+    if (!name.trim() || !email || !password.trim()) {
       return res.status(400).json({
         success: false,
         message: "Please fill in all fields.",
       });
     }
 
-    const emailExists = await User.findOne({ email });
-    if (emailExists)
-      return res
-        .status(400)
-        .json({ success: false, message: "Email already exists!" });
-
     if (!validator.isEmail(email)) {
       return res.status(400).json({
         success: false,
         message: "Please enter a valid email!",
+      });
+    }
+
+    const normalizedEmail = validator.normalizeEmail(email);
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter a valid email!",
+      });
+    }
+
+    const emailExists = await User.findOne({ email: normalizedEmail });
+    if (emailExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email already exists!" });
+    }
+
+    if (name.length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Name must be at least 3 characters long",
       });
     }
 
@@ -37,7 +59,7 @@ export async function signup(req, res) {
 
     const newUser = new User({
       name,
-      email,
+      email: normalizedEmail,
       password: hashedPassword,
     });
 
@@ -53,10 +75,18 @@ export async function signup(req, res) {
 }
 
 export async function signin(req, res) {
-  const { email, password } = req.body;
+  const email = trimInput(req.body.email);
+  const password = trimInput(req.body.password);
 
   try {
-    const user = await User.findOne({ email });
+    const normalizedEmail = validator.normalizeEmail(email);
+    if (!normalizedEmail) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Email or Password",
+      });
+    }
+    const user = await User.findOne({ email: normalizedEmail });
     if (!user) {
       return res
         .status(400)
@@ -100,14 +130,56 @@ export function checkSession(req, res) {
   res.json({ success: false });
 }
 
+export async function changePassword(req, res) {
+  const user = req.session.user;
+  const oldPassword = trimInput(req.body.oldPassword);
+  const newPassword = trimInput(req.body.newPassword);
+
+  try {
+    const dbUser = await User.findById(user._id);
+    const passwordMatch = await bcrypt.compare(oldPassword, dbUser.password);
+    if (!passwordMatch) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid old password",
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+
+    await User.findByIdAndUpdate(user._id, { password: hashedPassword });
+    res.json({ success: true, message: "Password changed successfully" });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      success: false,
+      message: error.message || "Failed to change password, please try again",
+    });
+  }
+}
+
 export async function updateUserInfo(req, res) {
   const user = req.session.user;
-  const { name, email } = req.body;
+  const name = trimInput(req.body.name);
+  const email = trimInput(req.body.email);
 
   try {
     const updates = {};
 
     if (name) {
+      if (name.length < 3) {
+        return res.status(400).json({
+          success: false,
+          message: "Name must be at least 3 characters long",
+        });
+      }
       updates.name = name;
     }
 
@@ -119,13 +191,21 @@ export async function updateUserInfo(req, res) {
         });
       }
 
-      const emailExists = await User.findOne({ email });
-      if (emailExists && user.email !== email)
+      const normalizedEmail = validator.normalizeEmail(email);
+      if (!normalizedEmail) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter a valid email!",
+        });
+      }
+
+      const emailExists = await User.findOne({ email: normalizedEmail });
+      if (emailExists && user.email !== normalizedEmail)
         return res
           .status(400)
           .json({ success: false, message: "Email already exists!" });
 
-      updates.email = email;
+      updates.email = normalizedEmail;
     }
 
     const updatedUser = await User.findByIdAndUpdate(user._id, updates, {
@@ -135,7 +215,6 @@ export async function updateUserInfo(req, res) {
     req.session.user = updatedUser;
     res.json({
       success: true,
-      user: updatedUser,
       message: "User information updated successfully",
     });
   } catch (err) {

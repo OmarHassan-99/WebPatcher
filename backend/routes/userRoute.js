@@ -5,6 +5,7 @@ import {
   logout,
   updateUserInfo,
   checkSession,
+  changePassword,
 } from "../controllers/userController.js";
 import authMiddleware from "../middleware/auth.js";
 
@@ -14,6 +15,7 @@ userRouter.post("/register", signup);
 userRouter.post("/login", signin);
 userRouter.post("/logout", logout);
 userRouter.get("/checkSession", checkSession);
-userRouter.put("/updateUserInfo", authMiddleware, updateUserInfo);
+userRouter.patch("/changePassword", authMiddleware, changePassword);
+userRouter.patch("/updateUserInfo", authMiddleware, updateUserInfo);
 
 export default userRouter;

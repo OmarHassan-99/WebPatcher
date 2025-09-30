@@ -43,7 +43,9 @@ export default function AuthPage() {
             error.message.includes("valid email!")
           ) {
             actions.setFieldError("email", error.message);
-          } else if (error.message.includes("strong password!")) {
+          } else if (error.message.includes("3 characters long")) {
+            actions.setFieldError("name", error.message);
+          } else if (error.message.includes("8 characters long")) {
             actions.setFieldError("password", error.message);
           } else {
             toast.error(
