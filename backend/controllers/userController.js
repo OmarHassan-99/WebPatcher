@@ -55,6 +55,21 @@ export async function signup(req, res) {
       });
     }
 
+    if (
+      !validator.isStrongPassword(password, {
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+      })
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 12);
 
     const newUser = new User({
@@ -149,6 +164,21 @@ export async function changePassword(req, res) {
       return res.status(400).json({
         success: false,
         message: "Password must be at least 8 characters long",
+      });
+    }
+
+    if (
+      !validator.isStrongPassword(newPassword, {
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+      })
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
       });
     }
 

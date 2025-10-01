@@ -45,7 +45,7 @@ export default function MainNavigation() {
     >
       {/* Logo / App Name */}
       <Link to="/" className="font-bold text-lg">
-        WebPatchy
+        WebPatcher
       </Link>
 
       {/* Desktop links */}

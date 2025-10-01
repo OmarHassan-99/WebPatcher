@@ -45,7 +45,12 @@ export default function AuthPage() {
             actions.setFieldError("email", error.message);
           } else if (error.message.includes("3 characters long")) {
             actions.setFieldError("name", error.message);
-          } else if (error.message.includes("8 characters long")) {
+          } else if (
+            error.message.includes("8 characters long") ||
+            error.message.includes(
+              "at least one uppercase letter, one lowercase letter, and one number"
+            )
+          ) {
             actions.setFieldError("password", error.message);
           } else {
             toast.error(
@@ -63,7 +68,7 @@ export default function AuthPage() {
 
   if (mode === "login") {
     texts = {
-      title: "Login to WebPatchy",
+      title: "Login to WebPatcher",
       subtitle: "Enter your credentials to access your account",
       link: "Don't have an account?",
       linkMode: "register",
