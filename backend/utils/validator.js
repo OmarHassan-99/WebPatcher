@@ -4,7 +4,7 @@ export function validateUrl(url) {
     if (!["http:", "https:"].includes(u.protocol)) return false;
 
     const hostname = u.hostname;
-    if ((hostname === "127.0.0.1" || hostname === "localhost") && process.env.ALLOW_LOCALHOST === "true") {
+    if ((hostname === "127.0.0.1" || hostname === "localhost") ) {
       return true;
     }
 
