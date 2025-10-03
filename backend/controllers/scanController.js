@@ -54,7 +54,7 @@ export async function getScan(req, res) {
     const { scanId } = req.params;
     const scan = await ScanJob.findById(scanId).lean();
     if (!scan) return res.status(404).json({  success:false , message: "Scan not found" });
-    if (String(scan.user) !== String(req.user._id))
+    if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({  success:false , message: "Forbidden" });
 
     // compute findingsCount quickly
@@ -82,7 +82,7 @@ export async function getFindings(req, res) {
     // ensure user owns scan
     const scan = await ScanJob.findById(scanId).lean();
     if (!scan) return res.status(404).json({ error: "Scan not found" });
-    if (String(scan.user) !== String(req.user._id))
+    if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({  success:false , message: "Forbidden" });
 
     // fetch findings in a lightweight form (not raw)
