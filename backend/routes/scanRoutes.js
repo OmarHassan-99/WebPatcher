@@ -8,7 +8,7 @@ import {
   
 } from "../controllers/scanController.js";
 
-const router = express.Router();
+const scanRouter = express.Router();
 
 router.use(auth);
 

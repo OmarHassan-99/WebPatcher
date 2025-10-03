@@ -67,7 +67,7 @@ export async function getScan(req, res) {
       zapScanId: scan.zapScanId || null,
       startedAt: scan.startedAt,
       finishedAt: scan.finishedAt,
-      findingsCount
+      findingsCount,
       success:true
     });
   } catch (err) {
