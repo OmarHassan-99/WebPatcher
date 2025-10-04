@@ -1,15 +1,10 @@
-import {
-  Link,
-  NavLink,
-  useNavigate,
-  useRouteLoaderData,
-} from "react-router-dom";
+import { Link, useNavigate, useRouteLoaderData } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "motion/react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import CustomLink from "../ui/CustomLink";
 import { useMutation } from "@tanstack/react-query";
-import { logout } from "../../util/http";
+import { logout } from "../../utils/http";
 import toast from "react-hot-toast";
 import useCsrf from "../../hooks/useCsrf";
 
@@ -41,7 +36,7 @@ export default function MainNavigation() {
       initial={{ opacity: 0, y: -200 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: "spring" }}
-      className="sticky top-4 z-50 text-primary-100 flex items-center justify-between bg-transparent border border-gray-700 backdrop-blur-xl rounded-full px-6 py-3 mx-4 sm:mx-12 lg:mx-32 shadow-lg"
+      className="sticky top-4 z-50 text-primary-100 flex items-center justify-between bg-transparent border border-gray-700 backdrop-blur-sm rounded-full px-6 py-3 mx-4 sm:mx-12 lg:mx-32 shadow-lg"
     >
       {/* Logo / App Name */}
       <Link to="/" className="font-bold text-lg">
@@ -52,8 +47,12 @@ export default function MainNavigation() {
       <div className="hidden sm:flex gap-6 font-semibold">
         {!isAuthenticated ? (
           <>
-            <CustomLink to="/auth?mode=login" title="Login" />
-            <CustomLink to="/auth?mode=register" title="Register" />
+            <CustomLink to="/auth?mode=login" mode="login" title="Login" />
+            <CustomLink
+              to="/auth?mode=register"
+              mode="register"
+              title="Register"
+            />
           </>
         ) : (
           <CustomLink title="Logout" onClick={() => handleLogout()} />
@@ -61,14 +60,35 @@ export default function MainNavigation() {
       </div>
 
       {/* Mobile menu button */}
-      <button
-        className="sm:hidden text-primary-100"
+      <Motion.button
+        whileTap={{ scale: 0.9 }}
+        className="sm:hidden text-primary-100 cursor-pointer"
         onClick={() => setIsOpen(!isOpen)}
       >
-        <div className="cursor-pointer">
-          {isOpen ? <X size={24} /> : <Menu size={24} />}
-        </div>
-      </button>
+        <AnimatePresence mode="wait">
+          {isOpen ? (
+            <Motion.div
+              key="close"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <X size={24} />
+            </Motion.div>
+          ) : (
+            <Motion.div
+              key="menu"
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 10 }}
+              transition={{ duration: 0.3 }}
+            >
+              <Menu size={24} />
+            </Motion.div>
+          )}
+        </AnimatePresence>
+      </Motion.button>
 
       {/* Mobile dropdown */}
       <AnimatePresence>
@@ -86,11 +106,13 @@ export default function MainNavigation() {
                   <CustomLink
                     to="/auth?mode=login"
                     title="Login"
+                    mode="login"
                     onClick={() => setIsOpen(false)}
                   />
                   <CustomLink
                     to="/auth?mode=register"
                     title="Register"
+                    mode="register"
                     onClick={() => setIsOpen(false)}
                   />
                 </>

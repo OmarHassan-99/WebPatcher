@@ -3,7 +3,7 @@ import NotFound from "./NotFound";
 import LoginForm from "../components/forms/LoginForm";
 import RegisterForm from "../components/forms/RegisterForm";
 import { useMutation } from "@tanstack/react-query";
-import { authenticate } from "../util/http";
+import { authenticate } from "../utils/http";
 import toast from "react-hot-toast";
 import useCsrf from "../hooks/useCsrf";
 

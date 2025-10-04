@@ -24,7 +24,7 @@ export async function authenticate({ mode, formData, csrfToken }) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Authentication failed");
     }
-    throw new Error("Authentication failed: " + error.message);
+    throw new Error(error.message);
   }
 }
 
@@ -42,11 +42,49 @@ export async function logout(csrfToken) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Logout failed");
     }
-    throw new Error("Logout failed: " + error.message);
+    throw new Error(error.message);
   }
 }
 
 export async function checkSession() {
   const response = await api.get("/auth/checkSession");
   return response.data;
+}
+
+export async function changePassword({ csrfToken, formData }) {
+  try {
+    const response = await api.patch("/auth/changePassword", formData, {
+      headers: { "x-csrf-token": csrfToken },
+    });
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || "Change password update failed");
+    }
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(
+        error.response.data?.message || "Change password update failed"
+      );
+    }
+    throw new Error(error.message);
+  }
+}
+
+export async function updateUserInfo({ csrfToken, formData }) {
+  try {
+    const response = await api.patch("/auth/updateUserInfo", formData, {
+      headers: { "x-csrf-token": csrfToken },
+    });
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(data.message || "Update failed");
+    }
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || "Update failed");
+    }
+    throw new Error(error.message);
+  }
 }

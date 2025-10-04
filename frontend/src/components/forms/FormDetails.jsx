@@ -14,10 +14,8 @@ export default function FormDetails({ texts, children }) {
         transition={{ type: "spring" }}
         className="bg-gradient-to-r from-primary-800 to-primary-700 p-8 rounded-lg shadow-lg"
       >
-        <h2 className="text-2xl font-bold text-primary-100 mb-2">
-          {texts.title}
-        </h2>
-        <p className="text-primary-200 mb-4">{texts.subtitle}</p>
+        <h2 className="text-2xl font-bold text-white mb-2">{texts.title}</h2>
+        <p className="text-white/80 mb-4">{texts.subtitle}</p>
         {children}
         <p className="text-center text-white mt-4">
           {texts.link}{" "}

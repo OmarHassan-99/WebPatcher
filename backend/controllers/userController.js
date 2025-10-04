@@ -61,6 +61,7 @@ export async function signup(req, res) {
         minLowercase: 1,
         minUppercase: 1,
         minNumbers: 1,
+        minSymbols: 0,
       })
     ) {
       return res.status(400).json({
@@ -149,6 +150,7 @@ export async function changePassword(req, res) {
   const user = req.session.user;
   const oldPassword = trimInput(req.body.oldPassword);
   const newPassword = trimInput(req.body.newPassword);
+  const confirmPassword = trimInput(req.body.confirmPassword);
 
   try {
     const dbUser = await User.findById(user._id);
@@ -160,10 +162,17 @@ export async function changePassword(req, res) {
       });
     }
 
+    if (oldPassword === newPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password cannot be the same as the old password",
+      });
+    }
+
     if (newPassword.length < 8) {
       return res.status(400).json({
         success: false,
-        message: "Password must be at least 8 characters long",
+        message: "New password must be at least 8 characters long",
       });
     }
 
@@ -173,19 +182,40 @@ export async function changePassword(req, res) {
         minLowercase: 1,
         minUppercase: 1,
         minNumbers: 1,
+        minSymbols: 0,
       })
     ) {
       return res.status(400).json({
         success: false,
         message:
-          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+          "New password must contain at least one uppercase letter, one lowercase letter, and one number",
+      });
+    }
+
+    if (newPassword !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "New password and confirm password do not match",
       });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-    await User.findByIdAndUpdate(user._id, { password: hashedPassword });
-    res.json({ success: true, message: "Password changed successfully" });
+    const updatedUser = await User.findByIdAndUpdate(
+      user._id,
+      { password: hashedPassword },
+      { new: true }
+    ).select("-password");
+
+    req.session.regenerate((err) => {
+      if (err) console.error("Failed to regenerate session:", err);
+    });
+
+    res.json({
+      success: true,
+      message: "Password changed successfully",
+      user: updatedUser,
+    });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -238,14 +268,28 @@ export async function updateUserInfo(req, res) {
       updates.email = normalizedEmail;
     }
 
+    if (Object.keys(updates).length === 0) {
+      return res.json({
+        success: false,
+        message: "Nothing updated",
+      });
+    }
+
     const updatedUser = await User.findByIdAndUpdate(user._id, updates, {
       new: true,
     }).select("-password");
 
     req.session.user = updatedUser;
+
     res.json({
       success: true,
-      message: "User information updated successfully",
+      message:
+        updates.name !== user.name && updates.email !== user.email
+          ? "User information updated successfully"
+          : updates.name !== user.name
+          ? "Name updated successfully"
+          : "Email updated successfully",
+      user: updatedUser,
     });
   } catch (err) {
     console.error(err);

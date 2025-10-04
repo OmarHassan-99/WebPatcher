@@ -1,12 +1,12 @@
-import { DotLottieReact } from "@lottiefiles/dotlottie-react";
 import { useRouteLoaderData } from "react-router-dom";
+import WhatWeOffer from "../components/sections/WhatWeOffer";
 
 export default function HomePage() {
   const session = useRouteLoaderData("root");
   const { success, user } = session;
 
   return (
-    <div className="text-white text-center flex flex-col items-center justify-center flex-1">
+    <div className="relative flex flex-1 flex-col items-center justify-center text-white text-center">
       HomePage
       {!success && <p>Not logged in</p>}
       {user && (
@@ -14,12 +14,7 @@ export default function HomePage() {
           My name is {user?.name} and my email is {user?.email}
         </p>
       )}
-      <DotLottieReact
-        className="h-44 w-96"
-        src="https://lottie.host/bdcddda5-6470-4160-a03c-a41c705d223d/nHUeTNlfiq.lottie"
-        loop
-        autoplay
-      />
+      <WhatWeOffer />
     </div>
   );
 }
