@@ -1,19 +1,3 @@
-// export default function CustomProfileButton({ handleClick, label, isActive }) {
-//   return (
-//     <button
-//       type="button"
-//       onClick={handleClick}
-//       className={`hover:text-primary-100 font-medium cursor-pointer ${
-//         isActive
-//           ? "border-b-2 border-primary-100 text-primary-100"
-//           : "text-primary-200"
-//       }`}
-//     >
-//       {label}
-//     </button>
-//   );
-// }
-
 import { motion as Motion } from "framer-motion";
 
 export default function CustomProfileButton({ handleClick, label, isActive }) {
