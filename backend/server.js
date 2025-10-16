@@ -7,6 +7,7 @@ import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 
 import userRouter from "./routes/userRoute.js";
+import scanRouter from "./routes/scanRoutes.js";
 
 import "dotenv/config.js";
 
@@ -59,6 +60,7 @@ app.get("/api/csrf-token", (req, res) => {
 });
 
 app.use("/auth", userRouter);
+app.use("/api/scans", scanRouter);
 app.use(doubleCsrfProtection);
 
 app.use((err, req, res, next) => {

@@ -1,11 +1,12 @@
 import Lottie from "lottie-react";
 import { Link, useRouteLoaderData } from "react-router-dom";
 import { motion as Motion } from "motion/react";
-import { Features } from "../../data/features";
+import { Features } from "../../data/constants";
 
 export default function WhatWeOffer() {
   const session = useRouteLoaderData("root");
   const { user } = session;
+
   return (
     <section className="py-16 mx-6">
       <div className="mx-auto text-center">

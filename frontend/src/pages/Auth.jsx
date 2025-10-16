@@ -30,9 +30,10 @@ export default function AuthPage() {
           actions.resetForm();
           actions.setSubmitting(false);
           toast.success(
-            data.message || mode === "login"
-              ? "Logged in successfully!"
-              : "Registered successfully!"
+            data.message ||
+              (mode === "login"
+                ? "Logged in successfully!"
+                : "Registered successfully!")
           );
           navigate(mode === "login" ? "/" : "/auth?mode=login");
         },

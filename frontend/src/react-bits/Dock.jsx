@@ -15,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useNavigate } from "react-router-dom";
 
 function DockItem({
   children,
@@ -124,6 +125,8 @@ export default function Dock({
   const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
   const height = useSpring(heightRow, spring);
 
+  const navigate = useNavigate();
+
   return (
     <motion.div
       style={{ height, scrollbarWidth: "none" }}
@@ -146,7 +149,7 @@ export default function Dock({
         {items.map((item, index) => (
           <DockItem
             key={index}
-            onClick={item.onClick}
+            onClick={() => navigate(item.path)}
             className={item.className}
             mouseX={mouseX}
             spring={spring}

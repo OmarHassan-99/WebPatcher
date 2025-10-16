@@ -8,7 +8,7 @@ import toast from "react-hot-toast";
 import CustomProfileButton from "../components/ui/CustomProfileButton";
 import CustomProfileInput from "../components/ui/CustomProfileInput";
 
-export default function Profile() {
+export default function ProfilePage() {
   const session = useRouteLoaderData("root");
   const { user } = session;
 
@@ -96,7 +96,7 @@ export default function Profile() {
       transition={{ type: "spring", damping: 20, stiffness: 120 }}
       className="flex items-center justify-center p-6"
     >
-      <div className="w-full max-w-4xl bg-primary-800/70 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
+      <div className="w-full max-w-4xl bg-primary-800 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
         {/* Left Side - Nav & Avatar */}
         <div className="flex flex-col justify-between md:w-1/3 text-center">
           {/* Tab Switch */}

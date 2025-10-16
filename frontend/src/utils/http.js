@@ -88,3 +88,30 @@ export async function updateUserInfo({ csrfToken, formData }) {
     throw new Error(error.message);
   }
 }
+
+export async function validateTargetURL({ csrfToken, targetURL }) {
+  try {
+    const response = await api.post(
+      "api/scans/validateTargetURL",
+      { targetURL },
+      {
+        headers: { "x-csrf-token": csrfToken },
+      }
+    );
+    const data = response.data;
+    if (!data.success) {
+      throw new Error(
+        data.message ||
+          "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com"
+      );
+    }
+    return data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(
+        error.response.data?.message || "Failed to validate target URL"
+      );
+    }
+    throw new Error(error.message);
+  }
+}

@@ -5,17 +5,17 @@ import {
   listScans,
   getScan,
   getFindings,
-  
+  validateTargetURL,
 } from "../controllers/scanController.js";
 
 const scanRouter = express.Router();
 
-router.use(auth);
+scanRouter.use(auth);
 
-router.post("/", startScan);                 // POST /api/scans
-router.get("/", listScans);                  // GET /api/scans
-router.get("/:scanId", getScan);             // GET /api/scans/:scanId
-router.get("/:scanId/findings", getFindings);// GET /api/scans/:scanId/findings
+scanRouter.post("/validateTargetURL", validateTargetURL); // POST /api/scans/validateTargetURL
+scanRouter.post("/startScan", startScan); // POST /api/scans/startScan
+scanRouter.get("/listScans", listScans); // GET /api/scans/listScans
+scanRouter.get("/:scanId", getScan); // GET /api/scans/:scanId
+scanRouter.get("/:scanId/findings", getFindings); // GET /api/scans/:scanId/findings
 
-
-export default router;
+export default scanRouter;

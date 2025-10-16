@@ -13,7 +13,7 @@ const userRouter = express.Router();
 
 userRouter.post("/register", signup);
 userRouter.post("/login", signin);
-userRouter.post("/logout", logout);
+userRouter.post("/logout", authMiddleware, logout);
 userRouter.get("/checkSession", checkSession);
 userRouter.patch("/changePassword", authMiddleware, changePassword);
 userRouter.patch("/updateUserInfo", authMiddleware, updateUserInfo);

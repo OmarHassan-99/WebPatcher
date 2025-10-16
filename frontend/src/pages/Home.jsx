@@ -1,5 +1,6 @@
 import { useRouteLoaderData } from "react-router-dom";
 import WhatWeOffer from "../components/sections/WhatWeOffer";
+import Footer from "../components/sections/Footer";
 
 export default function HomePage() {
   const session = useRouteLoaderData("root");
@@ -15,6 +16,7 @@ export default function HomePage() {
         </p>
       )}
       <WhatWeOffer />
+      <Footer />
     </div>
   );
 }

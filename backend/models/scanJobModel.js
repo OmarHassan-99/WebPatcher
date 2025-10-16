@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-const user = require("../models/scanJobModel");
 const scanJobSchema = new mongoose.Schema(
   {
     user: {

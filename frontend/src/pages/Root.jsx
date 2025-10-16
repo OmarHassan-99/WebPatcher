@@ -1,31 +1,12 @@
-import { Outlet, useLoaderData, useNavigate } from "react-router-dom";
+import { Outlet, useLoaderData } from "react-router-dom";
 import MainNavigation from "../components/layout/MainNavigation";
 import LightRays from "../react-bits/LightRays";
 import Dock from "../react-bits/Dock";
-import { Home, Target, User } from "lucide-react";
+import { dockItems } from "../data/constants";
 
 export default function RootLayout() {
   const session = useLoaderData();
   const { user } = session;
-  const navigate = useNavigate();
-
-  const items = [
-    {
-      icon: <Home size={18} color="white" />,
-      label: "Home",
-      onClick: () => navigate("/"),
-    },
-    {
-      icon: <Target size={18} color="white" />,
-      label: "Targets",
-      onClick: () => navigate("/"),
-    },
-    {
-      icon: <User size={18} color="white" />,
-      label: "Profile",
-      onClick: () => navigate("/profile"),
-    },
-  ];
 
   return (
     <div className="flex flex-col min-h-screen w-full">
@@ -36,10 +17,10 @@ export default function RootLayout() {
       <div className="fixed bottom-0 w-full z-50">
         {user && (
           <Dock
-            items={items}
+            items={dockItems}
             panelHeight={58}
             baseItemSize={40}
-            magnification={50}
+            magnification={45}
             className="bg-transparent backdrop-blur-sm"
           />
         )}
