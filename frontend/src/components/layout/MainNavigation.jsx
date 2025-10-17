@@ -39,8 +39,9 @@ export default function MainNavigation() {
       className="sticky top-4 z-50 text-primary-100 flex items-center justify-between bg-transparent border border-gray-700 backdrop-blur-sm rounded-full px-6 py-3 mx-4 sm:mx-12 lg:mx-32 shadow-lg"
     >
       {/* Logo / App Name */}
-      <Link to="/" className="font-bold text-lg">
-        WebPatcher
+      <Link to="/" className="flex gap-2 font-bold text-lg">
+        <img src="/logo.svg" alt="WebPatcher Logo" className="w-8 h-8" />
+        <p>WebPatcher</p>
       </Link>
 
       {/* Desktop links */}
