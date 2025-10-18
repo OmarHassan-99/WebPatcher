@@ -3,10 +3,11 @@ import { useNavigate, useRouteLoaderData } from "react-router-dom";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import useCsrf from "../hooks/useCsrf";
 import { useMutation } from "@tanstack/react-query";
-import { changePassword, updateUserInfo } from "../utils/http";
+import { changePassword, unlinkGitHub, updateUserInfo } from "../utils/http";
 import toast from "react-hot-toast";
 import CustomProfileButton from "../components/ui/CustomProfileButton";
 import CustomProfileInput from "../components/ui/CustomProfileInput";
+import GitHubButton from "../components/ui/GitHubButton";
 
 export default function ProfilePage() {
   const session = useRouteLoaderData("root");
@@ -22,12 +23,15 @@ export default function ProfilePage() {
     confirmPassword: "",
   });
   const [showField, setShowField] = useState("name&email");
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isClicked, setIsClicked] = useState(false);
 
   const navigate = useNavigate();
 
-  const { mutate } = useMutation({
+  const { mutate: update, isPending: isSubmittingUpdate } = useMutation({
     mutationFn: showField === "password" ? changePassword : updateUserInfo,
+  });
+  const { mutate: unlink, isPending: isSubmittingUnlink } = useMutation({
+    mutationFn: unlinkGitHub,
   });
 
   function handleChange(e) {
@@ -35,7 +39,6 @@ export default function ProfilePage() {
   }
 
   function handleSubmit(e) {
-    setIsSubmitting(true);
     e.preventDefault();
 
     const sendFormData =
@@ -50,7 +53,7 @@ export default function ProfilePage() {
             email: formData.email,
           };
 
-    mutate(
+    update(
       {
         csrfToken,
         formData: { ...sendFormData },
@@ -64,7 +67,23 @@ export default function ProfilePage() {
         onError: (error) => {
           toast.error(error.message || "Failed to update profile");
         },
-        onSettled: () => setIsSubmitting(false),
+      }
+    );
+  }
+
+  function handleUnlinkGitHub() {
+    unlink(
+      { csrfToken },
+      {
+        onSuccess: (data) => {
+          session.user = data.user;
+          toast.success(
+            data.message || "GitHub account unlinked successfully!"
+          );
+        },
+        onError: (error) => {
+          toast.error(error.message || "Failed to unlink GitHub account");
+        },
       }
     );
   }
@@ -88,6 +107,9 @@ export default function ProfilePage() {
     formData.newPassword.trim() === "" ||
     formData.confirmPassword.trim() === "";
 
+  const saveDisabled =
+    (nothingChanged && passwordIncomplete) || isSubmittingUpdate;
+
   return (
     <Motion.div
       layout
@@ -104,20 +126,38 @@ export default function ProfilePage() {
             <CustomProfileButton
               handleClick={() => handleTabSwitch("name&email")}
               isActive={showField === "name&email"}
-              label="Edit Name & Email"
+              label="Name & Email"
             />
+            {!user.githubUsername && (
+              <CustomProfileButton
+                handleClick={() => handleTabSwitch("password")}
+                isActive={showField === "password"}
+                label="Change Password"
+              />
+            )}
             <CustomProfileButton
-              handleClick={() => handleTabSwitch("password")}
-              isActive={showField === "password"}
-              label="Change Password"
+              handleClick={() => handleTabSwitch("githubLink")}
+              isActive={showField === "githubLink"}
+              label="GitHub Link"
             />
           </div>
 
           {/* Avatar */}
           <div className="flex flex-col items-center mt-6">
-            <div className="w-32 h-32 rounded-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white shadow-lg">
-              {formData.name.charAt(0).toUpperCase()}
+            <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-lg">
+              {user.githubUsername ? (
+                <img
+                  src={`https://avatars.githubusercontent.com/${user.githubUsername}`}
+                  alt="GitHub Avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="w-full h-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white">
+                  {formData.name.charAt(0).toUpperCase()}
+                </div>
+              )}
             </div>
+
             <h3 className="mt-4 text-xl font-semibold text-primary-100">
               {formData.name}
             </h3>
@@ -200,15 +240,76 @@ export default function ProfilePage() {
                 />
               </Motion.div>
             )}
+
+            {showField === "githubLink" && (
+              <Motion.div
+                key="githubLink"
+                layout
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+              >
+                {user.githubUsername ? (
+                  <div>
+                    <p className="text-primary-100">
+                      GitHub Username: {user.githubUsername}
+                    </p>
+                    <p className="text-primary-100">
+                      GitHub Link:{" "}
+                      <a
+                        href={`https://github.com/${user.githubUsername}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary-200 hover:text-primary-300 transition-colors"
+                      >
+                        {`https://github.com/${user.githubUsername}`}
+                      </a>
+                    </p>
+                  </div>
+                ) : (
+                  <GitHubButton
+                    mode="link"
+                    onClick={() => setIsClicked(true)}
+                    isClicked={isClicked}
+                  />
+                )}
+              </Motion.div>
+            )}
           </AnimatePresence>
 
           {/* Save Button */}
-          <button
-            className="mt-6 w-full py-3 rounded-xl bg-primary-400 hover:bg-primary-300 text-white font-semibold shadow-md transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={(nothingChanged && passwordIncomplete) || isSubmitting}
-          >
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </button>
+          <AnimatePresence mode="popLayout">
+            {showField !== "githubLink" ? (
+              <Motion.button
+                key="save"
+                layout
+                initial={{ y: 20 }}
+                animate={{ y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                disabled={saveDisabled}
+                className="mt-6 w-full py-3 rounded-xl bg-primary-400 hover:bg-primary-300 text-white font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-primary-400"
+              >
+                {isSubmittingUpdate ? "Saving..." : "Save Changes"}
+              </Motion.button>
+            ) : user.githubUsername ? (
+              <Motion.button
+                key="unlink"
+                layout
+                initial={{ y: 20 }}
+                animate={{ y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                transition={{ duration: 0.4 }}
+                type="button"
+                onClick={handleUnlinkGitHub}
+                disabled={isSubmittingUnlink}
+                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-red-600"
+              >
+                {isSubmittingUnlink ? "Unlinking..." : "Unlink GitHub Account"}
+              </Motion.button>
+            ) : null}
+          </AnimatePresence>
         </form>
       </div>
     </Motion.div>

@@ -35,6 +35,7 @@ function App() {
         {
           path: "profile",
           element: <ProfilePage />,
+          loader: checkAuthLoader,
         },
         {
           path: "targets",
