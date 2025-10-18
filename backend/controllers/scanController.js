@@ -4,29 +4,6 @@ import Finding from "../models/FindingModel.js";
 import { validateUrl } from "../utils/validator.js";
 import { initiateScan as runZapScanService } from '../services/zapService.js';
 
-//zap
-export const ZapScan = async (req, res) => {
-  const { url } = req.body;
-  console.log('Received request body:', url);
-
-  if (!url) {
-    return res.status(400).json({ message: 'URL is required' });
-  }
-
-  try {
-    console.log(`[ScanController] Received request to scan URL: ${url}`);
-    // We now call startScan directly
-    const report = await runZapScanService(url);
-
-    console.log('[ScanController] Scan complete. Sending report to user.');
-    res.status(200).json(report);
-
-  } catch (error) {
-    console.error('[ScanController] An error occurred:', error);
-    res.status(500).json({ message: 'Failed to complete the scan.' });
-  }
-};
-
 export async function validateTargetURL(req, res) {
   try {
     const { targetURL } = req.body;
@@ -79,6 +56,7 @@ export async function startScan(req, res) {
 }
 
 export async function listScans(req, res) {
+  console.log("list scan");
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const size = Math.min(50, parseInt(req.query.size) || 20);
@@ -151,3 +129,27 @@ export async function getFindings(req, res) {
 }
 
 
+
+//zap
+export const ZapScan = async (req, res) => {
+
+  const { url } = req.body;
+  console.log('Received request body:', url);
+
+  if (!url) {
+    return res.status(400).json({ message: 'URL is required' });
+  }
+
+  try {
+    console.log(`[ScanController] Received request to scan URL: ${url}`);
+    // We now call startScan directly
+    const report = await runZapScanService(url);
+
+    console.log('[ScanController] Scan complete. Sending report to user.');
+    res.status(200).json(report);
+
+  } catch (error) {
+    console.error('[ScanController] An error occurred:', error);
+    res.status(500).json({ message: 'Failed to complete the scan.' });
+  }
+};
