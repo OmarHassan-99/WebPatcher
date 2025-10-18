@@ -1,7 +1,11 @@
 import { Link } from "react-router-dom";
 import { motion as Motion } from "motion/react";
+import GitHubButton from "../ui/GitHubButton";
+import { useState } from "react";
 
-export default function FormDetails({ texts, children }) {
+export default function FormDetails({ texts, mode, children }) {
+  const [isClicked, setIsClicked] = useState(false);
+
   return (
     <div className="flex w-full items-center justify-center">
       <Motion.div
@@ -17,6 +21,14 @@ export default function FormDetails({ texts, children }) {
         <h2 className="text-2xl font-bold text-white mb-2">{texts.title}</h2>
         <p className="text-white/80 mb-4">{texts.subtitle}</p>
         {children}
+        {mode === "login" && (
+          <div className="mt-2">
+            <GitHubButton
+              onClick={() => setIsClicked(true)}
+              isClicked={isClicked}
+            />
+          </div>
+        )}
         <p className="text-center text-white mt-4">
           {texts.link}{" "}
           <Link

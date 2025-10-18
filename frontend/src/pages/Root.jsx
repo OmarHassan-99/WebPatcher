@@ -3,10 +3,13 @@ import MainNavigation from "../components/layout/MainNavigation";
 import LightRays from "../react-bits/LightRays";
 import Dock from "../react-bits/Dock";
 import { dockItems } from "../data/constants";
+import useGitHubToast from "../hooks/useGitHubToast";
 
 export default function RootLayout() {
   const session = useLoaderData();
   const { user } = session;
+
+  useGitHubToast();
 
   return (
     <div className="flex flex-col min-h-screen w-full">

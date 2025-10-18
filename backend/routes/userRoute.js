@@ -6,6 +6,9 @@ import {
   updateUserInfo,
   checkSession,
   changePassword,
+  redirectToGitHubAuth,
+  githubCallback,
+  unlinkGitHub,
 } from "../controllers/userController.js";
 import authMiddleware from "../middleware/auth.js";
 
@@ -17,5 +20,9 @@ userRouter.post("/logout", authMiddleware, logout);
 userRouter.get("/checkSession", checkSession);
 userRouter.patch("/changePassword", authMiddleware, changePassword);
 userRouter.patch("/updateUserInfo", authMiddleware, updateUserInfo);
+
+userRouter.get("/github", redirectToGitHubAuth);
+userRouter.get("/github/callback", githubCallback);
+userRouter.patch("/github/unlink", authMiddleware, unlinkGitHub);
 
 export default userRouter;

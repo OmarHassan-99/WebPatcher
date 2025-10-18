@@ -20,6 +20,7 @@ export default function MainNavigation() {
     mutationFn: () => logout(csrfToken),
     onSuccess: (data) => {
       toast.success(data.message || "Logged out successfully!");
+      window.history.replaceState({}, "", window.location.pathname);
       navigate("/");
     },
     onError: (error) => {

@@ -122,7 +122,7 @@ export default function Stepper({
         {!isCompleted && (
           <div className={`px-8 pb-8 ${footerClassName}`}>
             <div
-              className={`flex ${
+              className={`mt-6 sm:mt-0 flex ${
                 currentStep !== 1 ? "justify-between" : "justify-end"
               }`}
             >

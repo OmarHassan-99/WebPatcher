@@ -10,7 +10,7 @@ export default function FormikForm({
   content,
 }) {
   return (
-    <FormDetails texts={texts}>
+    <FormDetails texts={texts} mode={mode}>
       <Formik
         initialValues={initialValues}
         validationSchema={mode === "login" ? loginSchema : registerSchema}

@@ -6,6 +6,7 @@ export default function TargetUrl({ formData, updateField, error, setError }) {
     <>
       <h2 className="text-lg font-semibold">Step 1: Target URL</h2>
       <input
+        name="targetUrl"
         value={formData.targetUrl}
         onChange={(e) => {
           updateField("targetUrl", e.target.value);

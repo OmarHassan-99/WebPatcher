@@ -1,18 +1,16 @@
 import express from "express";
-import auth from "../middleware/auth.js";
+import authMiddleware from "../middleware/auth.js";
 import {
-  startScan,
+  validateTargetURL,
+  ZapScan,
   listScans,
   getScan,
   getFindings,
-  validateTargetURL,
-  ZapScan,
 } from "../controllers/scanController.js";
 
 const scanRouter = express.Router();
 
-//scanRouter.use(auth);
-
+scanRouter.use(authMiddleware);
 
 scanRouter.post("/validateTargetURL", validateTargetURL); // POST /api/scans/validateTargetURL
 scanRouter.post("/startScan", ZapScan); // POST /api/scans/startScan
