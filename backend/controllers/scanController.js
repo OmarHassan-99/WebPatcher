@@ -11,10 +11,10 @@ export async function validateTargetURL(req, res) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com",
+          "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD)",
       });
     }
-    return res.json({ success: true, valid: true });
+    return res.json({ success: true});
   } catch (err) {
     console.error(err);
     return res.status(500).json({
@@ -39,7 +39,7 @@ export async function startScan(req, res) {
       context,
     });
 
-    // If queue service is not available, skip enqueuing to avoid runtime errors
+    // Uncomment lama n3mel el queue
     // if (queue && typeof queue.add === "function") {
     //   await queue.add("scan", { scanId: scan._id });
     // }
@@ -86,7 +86,7 @@ export async function getScan(req, res) {
     if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({ success: false, message: "Forbidden" });
 
-    // compute findingsCount quickly
+    
     const findingsCount = Array.isArray(scan.findings)
       ? scan.findings.length
       : 0;
@@ -110,12 +110,10 @@ export async function getScan(req, res) {
 export async function getFindings(req, res) {
   try {
     const { scanId } = req.params;
-    // ensure user owns scan
     const scan = await ScanJob.findById(scanId).lean();
     if (!scan) return res.status(404).json({ success: false, message: "Scan not found" });
     if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({ success: false, message: "Forbidden" });
-    // fetch findings in a lightweight form (not raw)
     const findings = await Finding.find({ scanJob: scanId })
       .select("alertName severity cweId description probableFilePaths createdAt")
       .sort({ severity: -1, createdAt: -1 })
