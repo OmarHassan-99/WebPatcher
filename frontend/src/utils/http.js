@@ -136,3 +136,23 @@ export async function unlinkGitHub({ csrfToken }) {
     throw new Error(error.message);
   }
 }
+
+export async function startZapScan({ csrfToken, url }) {
+  console.log("in http");
+  try {
+    const response = await api.post(
+      "/api/scans/startScan",
+      { url },
+      {
+        headers: { "x-csrf-token": csrfToken },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || "Failed to start scan");
+    }
+    throw new Error(error.message);
+  }
+}
