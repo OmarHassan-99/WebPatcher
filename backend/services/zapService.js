@@ -51,11 +51,11 @@ export const initiateScan = async (targetUrl) => {
     await sleep(5000);
   }
 
-  console.log(
-    "[ZapService] Scan finished. Waiting 5 seconds for ZAP to finalize the report..."
-  );
+  // console.log(
+  //   "[ZapService] Scan finished. Waiting 5 seconds for ZAP to finalize the report..."
+  // );
 
-  await sleep(5000);
+  // await sleep(5000);
 
   const alerts = await axios.get(
     "http://localhost:8080/JSON/alert/view/alerts/",
@@ -70,8 +70,8 @@ export const initiateScan = async (targetUrl) => {
   );
 
   // // --- SAVE THE REPORT AS A FILE FOR VERIFICATION ---
-  console.log("Saving report to report.json...");
-  fs.writeFileSync("report.json", JSON.stringify(alerts.data, null, 2));
+  // console.log("Saving report to report.json...");
+  // fs.writeFileSync("report.json", JSON.stringify(alerts.data, null, 2));
   // // --------------------------------------------------
   return alerts.data;
 };

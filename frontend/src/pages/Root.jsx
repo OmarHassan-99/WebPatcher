@@ -2,7 +2,7 @@ import { Outlet, useLoaderData } from "react-router-dom";
 import MainNavigation from "../components/layout/MainNavigation";
 import LightRays from "../react-bits/LightRays";
 import Dock from "../react-bits/Dock";
-import { dockItems } from "../data/constants";
+import { DOCK_ITEMS } from "../data/constants";
 import useGitHubToast from "../hooks/useGitHubToast";
 
 export default function RootLayout() {
@@ -20,7 +20,7 @@ export default function RootLayout() {
       <div className="fixed bottom-0 w-full z-50">
         {user && (
           <Dock
-            items={dockItems}
+            items={DOCK_ITEMS}
             panelHeight={58}
             baseItemSize={40}
             magnification={45}

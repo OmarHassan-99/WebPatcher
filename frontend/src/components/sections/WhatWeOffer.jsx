@@ -1,7 +1,7 @@
 import Lottie from "lottie-react";
 import { Link, useRouteLoaderData } from "react-router-dom";
 import { motion as Motion } from "motion/react";
-import { Features } from "../../data/constants";
+import { FEATURES } from "../../data/constants";
 
 export default function WhatWeOffer() {
   const session = useRouteLoaderData("root");
@@ -21,7 +21,7 @@ export default function WhatWeOffer() {
 
         {/* Features */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {Features.map((f, i) => (
+          {FEATURES.map((f, i) => (
             <Motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}

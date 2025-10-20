@@ -41,8 +41,16 @@ export default function MainNavigation() {
     >
       {/* Logo / App Name */}
       <Link to="/" className="flex gap-2 font-bold text-lg">
-        <img src="/logo.svg" alt="WebPatcher Logo" className="w-8 h-8" />
-        <p>WebPatcher</p>
+        <Motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          whileHover={{ scale: 1.05 }}
+          transition={{ type: "spring" }}
+          className="flex items-center gap-2"
+        >
+          <img src="/logo.svg" alt="WebPatcher Logo" className="w-8 h-8" />
+          <p>WebPatcher</p>
+        </Motion.div>
       </Link>
 
       {/* Desktop links */}

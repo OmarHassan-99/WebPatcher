@@ -138,7 +138,6 @@ export async function unlinkGitHub({ csrfToken }) {
 }
 
 export async function startZapScan({ csrfToken, url }) {
-  console.log("in http");
   try {
     const response = await api.post(
       "/api/scans/startScan",
