@@ -1,7 +1,7 @@
 import ScanJob from "../models/scanJobModel.js";
 import Finding from "../models/FindingModel.js";
 //import queue from "../services/queue.js";
-import { validateUrl } from "../utils/validator.js";
+import {validateUrl} from "../utils/validator.js";
 import { initiateScan as runZapScanService } from '../services/zapService.js';
 
 export async function validateTargetURL(req, res) {
@@ -14,7 +14,7 @@ export async function validateTargetURL(req, res) {
           "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD)",
       });
     }
-    return res.json({ success: true});
+    return res.json({ success: true, valid: true});
   } catch (err) {
     console.error(err);
     return res.status(500).json({
