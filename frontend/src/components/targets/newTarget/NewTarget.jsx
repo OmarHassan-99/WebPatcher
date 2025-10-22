@@ -74,7 +74,6 @@ export default function NewTarget() {
   const { mutate: startScanMutate } = useMutation({ mutationFn: startZapScan });
 
   function handleStartScan() {
-    console.log("starting scan");
     setScanStage("scan");
     startScanMutate(
       { csrfToken, url: formData.targetUrl },
@@ -130,7 +129,7 @@ export default function NewTarget() {
   return (
     <div className="text-white">
       <Stepper
-        stepContainerClassName={`${scanStage === "done" ? "hidden" : ""}`}
+        stepContainerClassName={`${scanStage !== null ? "hidden" : ""}`}
         onFinalStepCompleted={handleStartScan}
       >
         <Step
@@ -234,7 +233,9 @@ export default function NewTarget() {
                   {/* <VulnerabilityCard alert={scanResult.alerts[0]} /> */}
                 </div>
               ) : (
-                <p className="text-gray-400">No vulnerabilities found</p>
+                <p className="text-gray-400 text-center">
+                  No vulnerabilities found
+                </p>
               )}
             </Motion.div>
           )}

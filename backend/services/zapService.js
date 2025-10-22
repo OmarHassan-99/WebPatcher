@@ -24,7 +24,7 @@ export const initiateScan = async (targetUrl) => {
     const status = parseInt(response.status, 10);
     console.log(`[ZapService] Spider progress: ${status}%`);
     if (status >= 100) break;
-    await sleep(1000);
+    // await sleep(1000);
   }
 
   // console.log('Resetting scan policy to enable all scanners for a full scan...');
@@ -48,7 +48,7 @@ export const initiateScan = async (targetUrl) => {
     const status = parseInt(response.status, 10);
     console.log(`[ZapService] Active Scan progress: ${status}%`);
     if (status >= 100) break;
-    await sleep(5000);
+    // await sleep(5000);
   }
 
   // console.log(

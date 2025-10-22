@@ -27,7 +27,6 @@ export default function Stepper({
   const isLastStep = currentStep === totalSteps;
 
   const activeStep = stepsArray[currentStep - 1];
-  // console.log("active step props:", activeStep?.props);
 
   const updateStep = (newStep) => {
     setCurrentStep(newStep);

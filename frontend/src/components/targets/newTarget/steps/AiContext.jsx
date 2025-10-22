@@ -8,7 +8,7 @@ import {
   SCMs,
   WEB_SERVERS,
 } from "../../../../data/constants";
-import ContextContainer from "../ContextContainer";
+import ContextContainer from "./ContextContainer";
 
 export default function AIContext({ formData, updateAiContext }) {
   const [selectedDB, setSelectedDB] = useState(formData.context.db);

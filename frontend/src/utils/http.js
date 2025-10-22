@@ -137,6 +137,21 @@ export async function unlinkGitHub({ csrfToken }) {
   }
 }
 
+export async function setPassword({ csrfToken, formData }) {
+  try {
+    const response = await api.post("/auth/set-password", formData, {
+      headers: { "x-csrf-token": csrfToken },
+    });
+
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || "Failed to set password");
+    }
+    throw new Error(error.message);
+  }
+}
+
 export async function startZapScan({ csrfToken, url }) {
   try {
     const response = await api.post(
@@ -154,4 +169,13 @@ export async function startZapScan({ csrfToken, url }) {
     }
     throw new Error(error.message);
   }
+}
+
+export async function deleteAccount(csrfToken) {
+  const res = await api.post(
+    "/auth/delete-account",
+    {},
+    { headers: { "CSRF-Token": csrfToken } }
+  );
+  return res.data;
 }

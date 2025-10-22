@@ -5,6 +5,8 @@ import axios from "axios";
 import crypto from "crypto";
 
 import "dotenv/config.js";
+import ScanJob from "../models/scanJobModel.js";
+import Finding from "../models/FindingModel.js";
 
 function trimInput(input) {
   return typeof input === "string" ? input.trim() : "";
@@ -126,6 +128,7 @@ export async function signin(req, res) {
       name: user.name,
       email: user.email,
       githubUsername: user.githubUsername,
+      isSetPassword: user.githubUsername && user.password ? true : false,
     };
     res.json({ success: true, message: "Logged in successfully" });
   } catch (error) {
@@ -163,12 +166,6 @@ export async function changePassword(req, res) {
 
   try {
     const dbUser = await User.findById(user._id);
-    if (dbUser.githubId) {
-      return res.status(403).json({
-        success: false,
-        message: "Password change not available for GitHub-authenticated users",
-      });
-    }
 
     const passwordMatch = await bcrypt.compare(oldPassword, dbUser.password);
     if (!passwordMatch) {
@@ -223,14 +220,18 @@ export async function changePassword(req, res) {
       { new: true }
     ).select("-password");
 
-    req.session.regenerate((err) => {
-      if (err) console.error("Failed to regenerate session:", err);
-    });
+    req.session.user = {
+      _id: updatedUser._id,
+      name: updatedUser.name,
+      email: updatedUser.email,
+      githubUsername: updatedUser.githubUsername,
+      isSetPassword: true,
+    };
 
     res.json({
       success: true,
       message: "Password changed successfully",
-      user: updatedUser,
+      user: req.session.user,
     });
   } catch (error) {
     console.error(error);
@@ -291,11 +292,14 @@ export async function updateUserInfo(req, res) {
       });
     }
 
-    const updatedUser = await User.findByIdAndUpdate(user._id, updates, {
+    await User.findByIdAndUpdate(user._id, updates, {
       new: true,
     }).select("-password");
 
-    req.session.user = updatedUser;
+    req.session.user = {
+      ...user,
+      ...updates,
+    };
 
     res.json({
       success: true,
@@ -305,7 +309,7 @@ export async function updateUserInfo(req, res) {
           : updates.name !== user.name
           ? "Name updated successfully"
           : "Email updated successfully",
-      user: updatedUser,
+      user: req.session.user,
     });
   } catch (err) {
     console.error(err);
@@ -421,6 +425,7 @@ export async function githubCallback(req, res) {
         name: user.name,
         email: user.email,
         githubUsername: user.githubUsername,
+        isSetPassword: user.password ? true : false,
       };
     } else if (mode === "link") {
       const currentUser = req.session.user;
@@ -465,6 +470,7 @@ export async function githubCallback(req, res) {
         name: user.name,
         email: user.email,
         githubUsername: user.githubUsername,
+        isSetPassword: user.password ? true : false,
       };
     }
 
@@ -529,6 +535,106 @@ export async function unlinkGitHub(req, res) {
     res.status(500).json({
       success: false,
       message: error.message || "Failed to unlink GitHub account",
+    });
+  }
+}
+
+export async function setPassword(req, res) {
+  try {
+    const { password, confirmPassword } = req.body;
+    const user = await User.findById(req.session.user._id);
+
+    if (!password || password.length < 8) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 8 characters long",
+      });
+    }
+
+    if (
+      !validator.isStrongPassword(password, {
+        minLength: 8,
+        minLowercase: 1,
+        minUppercase: 1,
+        minNumbers: 1,
+        minSymbols: 0,
+      })
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      });
+    }
+
+    if (password !== confirmPassword) {
+      return res.status(400).json({
+        success: false,
+        message: "Password and confirm password do not match",
+      });
+    }
+
+    if (!user.githubUsername) {
+      return res.status(400).json({
+        success: false,
+        message: "This feature is only for GitHub users",
+      });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 12);
+    user.password = hashedPassword;
+
+    await user.save();
+
+    req.session.user = {
+      _id: user._id,
+      name: user.name,
+      email: user.email,
+      githubUsername: user.githubUsername,
+      isSetPassword: true,
+    };
+
+    res.status(200).json({
+      success: true,
+      message:
+        "Password set successfully! You can now log in using email/password or unlink your GitHub account",
+      user: req.session.user,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, message: "Failed to set password" });
+  }
+}
+
+export async function deleteAccount(req, res) {
+  try {
+    const userId = req.session.user._id;
+
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: "You must be logged in to delete your account",
+      });
+    }
+
+    await Promise.all([
+      ScanJob.deleteMany({ userId }),
+      Finding.deleteMany({ userId }),
+    ]);
+
+    await User.findByIdAndDelete(userId);
+    req.session.destroy(() => {
+      res.clearCookie("connect.sid");
+      res.status(200).json({
+        success: true,
+        message: "Your account has been deleted successfully",
+      });
+    });
+  } catch (error) {
+    console.error("Account deletion failed:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to delete account. Please try again later",
     });
   }
 }
