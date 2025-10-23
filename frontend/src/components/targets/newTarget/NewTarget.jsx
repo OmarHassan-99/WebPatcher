@@ -168,7 +168,7 @@ export default function NewTarget() {
                 loop
                 autoplay
               />
-              <p className="text-lg text-primary-200 mt-2 font-medium">
+              <p className="text-lg text-primary-200 mt-2 font-medium animate-pulse">
                 Scanning target for vulnerabilities…
               </p>
             </Motion.div>
@@ -189,7 +189,7 @@ export default function NewTarget() {
                 loop
                 autoplay
               />
-              <p className="text-lg text-primary-200 mt-2 font-medium">
+              <p className="text-lg text-primary-200 mt-2 font-medium animate-pulse">
                 Analyzing and classifying results…
               </p>
             </Motion.div>
@@ -218,7 +218,7 @@ export default function NewTarget() {
               </p>
 
               {scanResult?.alerts?.length > 0 ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mx-7">
+                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mx-7 mb-7">
                   {scanResult.alerts.map((alert, i) => (
                     <Motion.div
                       key={i}
@@ -230,7 +230,6 @@ export default function NewTarget() {
                       <VulnerabilityCard alert={alert} />
                     </Motion.div>
                   ))}
-                  {/* <VulnerabilityCard alert={scanResult.alerts[0]} /> */}
                 </div>
               ) : (
                 <p className="text-gray-400 text-center">

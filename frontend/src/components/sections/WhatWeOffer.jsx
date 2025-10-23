@@ -40,9 +40,7 @@ export default function WhatWeOffer() {
                 loop
                 autoplay
               />
-              <h3 className="text-xl font-semibold text-primary-100">
-                {f.title}
-              </h3>
+              <h3 className="text-xl text-white font-semibold">{f.title}</h3>
               <p className="text-primary-200 mt-2">{f.desc}</p>
             </Motion.div>
           ))}
