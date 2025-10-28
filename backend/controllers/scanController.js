@@ -1,8 +1,9 @@
 import ScanJob from "../models/scanJobModel.js";
 import Finding from "../models/FindingModel.js";
 //import queue from "../services/queue.js";
-import {validateUrl} from "../utils/validator.js";
-import { initiateScan as runZapScanService } from '../services/zapService.js';
+import { validateUrl } from "../utils/validator.js";
+import { initiateScan as runZapScanService } from "../services/zapService.js";
+import { isHostReachable } from "../utils/network.js";
 
 export async function validateTargetURL(req, res) {
   try {
@@ -11,10 +12,21 @@ export async function validateTargetURL(req, res) {
       return res.status(400).json({
         success: false,
         message:
-          "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD)",
+          "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)",
       });
     }
-    return res.json({ success: true, valid: true});
+
+    const check = await isHostReachable(targetURL);
+    if (!check.ok) {
+      return res.status(400).json({
+        success: false,
+        message:
+          check.reason ||
+          "Target is not reachable (timeout or connection refused)",
+      });
+    }
+
+    return res.json({ success: true, valid: true });
   } catch (err) {
     console.error(err);
     return res.status(500).json({
@@ -30,7 +42,9 @@ export async function startScan(req, res) {
 
     const trimmedURL = String(targetURL || "").trim();
     if (!trimmedURL || !validateUrl(trimmedURL)) {
-      return res.status(400).json({ success: false, message: "Invalid targetURL" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid targetURL" });
     }
 
     const scan = await ScanJob.create({
@@ -51,7 +65,9 @@ export async function startScan(req, res) {
     });
   } catch (err) {
     console.error("startScan error:", err);
-    return res.status(500).json({ success: false, message: "Failed to start scan" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to start scan" });
   }
 }
 
@@ -73,7 +89,9 @@ export async function listScans(req, res) {
     return res.json({ total, page, size, scans, success: true });
   } catch (err) {
     console.error("listScans error:", err);
-    return res.status(500).json({ success: false, message: "Failed to list scans" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to list scans" });
   }
 }
 
@@ -82,11 +100,12 @@ export async function getScan(req, res) {
     const { scanId } = req.params;
     const scan = await ScanJob.findById(scanId).lean();
     if (!scan)
-      return res.status(404).json({ success: false, message: "Scan not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Scan not found" });
     if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({ success: false, message: "Forbidden" });
 
-    
     const findingsCount = Array.isArray(scan.findings)
       ? scan.findings.length
       : 0;
@@ -103,7 +122,9 @@ export async function getScan(req, res) {
     });
   } catch (err) {
     console.error("getScan error:", err);
-    return res.status(500).json({ success: false, message: "Failed to get scan" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to get scan" });
   }
 }
 
@@ -111,31 +132,35 @@ export async function getFindings(req, res) {
   try {
     const { scanId } = req.params;
     const scan = await ScanJob.findById(scanId).lean();
-    if (!scan) return res.status(404).json({ success: false, message: "Scan not found" });
+    if (!scan)
+      return res
+        .status(404)
+        .json({ success: false, message: "Scan not found" });
     if (String(scan.user) !== String(req.session.user._id))
       return res.status(403).json({ success: false, message: "Forbidden" });
     const findings = await Finding.find({ scanJob: scanId })
-      .select("alertName severity cweId description probableFilePaths createdAt")
+      .select(
+        "alertName severity cweId description probableFilePaths createdAt"
+      )
       .sort({ severity: -1, createdAt: -1 })
       .lean();
 
     return res.json({ scanId, findings });
   } catch (err) {
     console.error("getFindings error:", err);
-    return res.status(500).json({ success: false, message: "Failed to fetch findings" });
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to fetch findings" });
   }
 }
 
-
-
 //zap
 export const ZapScan = async (req, res) => {
-
   const { url } = req.body;
-  console.log('Received request body:', url);
+  console.log("Received request body:", url);
 
   if (!url) {
-    return res.status(400).json({ message: 'URL is required' });
+    return res.status(400).json({ message: "URL is required" });
   }
 
   try {
@@ -143,11 +168,10 @@ export const ZapScan = async (req, res) => {
     // We now call startScan directly
     const report = await runZapScanService(url);
 
-    console.log('[ScanController] Scan complete. Sending report to user.');
+    console.log("[ScanController] Scan complete. Sending report to user.");
     res.status(200).json(report);
-
   } catch (error) {
-    console.error('[ScanController] An error occurred:', error);
-    res.status(500).json({ message: 'Failed to complete the scan.' });
+    console.error("[ScanController] An error occurred:", error);
+    res.status(500).json({ message: "Failed to complete the scan." });
   }
 };

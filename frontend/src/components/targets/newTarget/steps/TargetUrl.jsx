@@ -1,23 +1,34 @@
 import CheckField from "./CheckField";
 import LockButton from "../../../../react-bits/LockButton";
+import CustomTargetInput from "./CustomTargetInput";
 
 export default function TargetUrl({ formData, updateField, error, setError }) {
   return (
     <>
-      <h2 className="text-lg font-semibold">Step 1: Target URL</h2>
-      <input
-        name="targetUrl"
-        value={formData.targetUrl}
-        onChange={(e) => {
-          updateField("targetUrl", e.target.value);
-          setError("");
-        }}
-        placeholder="https://example.com"
-        className="p-2 rounded-md mt-2 w-full bg-primary-800 focus:outline-none focus:ring-2 focus:ring-primary-400 transition-all duration-500"
-        type="url"
-        required
-      />
-      {error && <p className="text-red-400 mt-2">{error}</p>}
+      <div className="flex flex-col gap-4">
+        <CustomTargetInput
+          label="Target URL"
+          name="targetUrl"
+          value={formData.targetUrl}
+          onChange={(e) => {
+            updateField("targetUrl", e.target.value);
+            setError("");
+          }}
+          placeholder="https://example.com"
+          error={error}
+        />
+
+        <CustomTargetInput
+          label="Github Repo URL"
+          name="githubRepoUrl"
+          value={formData.githubRepoUrl}
+          onChange={(e) => {
+            updateField("githubRepoUrl", e.target.value);
+            setError("");
+          }}
+          placeholder="https://github.com/username/repo-name"
+        />
+      </div>
 
       <div className="mt-4 flex flex-col justify-center space-y-3 text-white">
         <CheckField spanText="Unauthorized scanning of third-party targets is strictly prohibited" />

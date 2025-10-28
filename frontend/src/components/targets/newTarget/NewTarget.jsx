@@ -17,6 +17,7 @@ import VulnerabilityCard from "../VulnerabilityCard";
 export default function NewTarget() {
   const [formData, setFormData] = useState({
     targetUrl: "",
+    githubRepoUrl: "",
     context: { db: [], lang: [], fw: [], os: [], scm: [], ws: [] },
     isChecked: false,
   });
@@ -27,19 +28,7 @@ export default function NewTarget() {
   const csrfToken = useCsrf();
 
   const { mutate: validateMutate, isPending: isPendingValidation } =
-    useMutation({
-      mutationFn: validateTargetURL,
-      onSuccess: (res) => {
-        if (res.valid) setError("");
-      },
-      onError: (err) => {
-        console.error(err);
-        setError(
-          err.message ||
-            "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com"
-        );
-      },
-    });
+    useMutation({ mutationFn: validateTargetURL });
 
   function handleUrlValidation(targetURL) {
     return new Promise((resolve) => {
@@ -53,7 +42,7 @@ export default function NewTarget() {
             } else {
               setError(
                 res.message ||
-                  "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com"
+                  "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
               );
               resolve(false);
             }
@@ -62,7 +51,7 @@ export default function NewTarget() {
             console.error(err);
             setError(
               err.message ||
-                "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com"
+                "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
             );
             resolve(false);
           },
@@ -79,13 +68,11 @@ export default function NewTarget() {
       { csrfToken, url: formData.targetUrl },
       {
         onSuccess: (data) => {
+          setScanStage("analyze");
           setTimeout(() => {
-            setScanStage("analyze");
-            setTimeout(() => {
-              setScanResult(data);
-              setScanStage("done");
-            }, 2000);
-          }, 2500);
+            setScanResult(data);
+            setScanStage("done");
+          }, 3500);
         },
         onError: (err) => {
           console.error("Scan failed:", err);
@@ -133,7 +120,7 @@ export default function NewTarget() {
         onFinalStepCompleted={handleStartScan}
       >
         <Step
-          stepLabel="Target URL"
+          stepLabel="Target & Repo URLs"
           onNext={() => handleUrlValidation(formData.targetUrl)}
           isNextDisabled={!formData.targetUrl.trim() || !formData.isChecked}
           isPending={isPendingValidation}

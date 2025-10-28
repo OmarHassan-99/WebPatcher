@@ -102,7 +102,7 @@ export async function validateTargetURL({ csrfToken, targetURL }) {
     if (!data.success) {
       throw new Error(
         data.message ||
-          "Invalid URL. Target URL must be a valid absolute URL with a valid top level domain (TLD) eg. https://example.com"
+          "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
       );
     }
     return data;
@@ -111,6 +111,25 @@ export async function validateTargetURL({ csrfToken, targetURL }) {
       throw new Error(
         error.response.data?.message || "Failed to validate target URL"
       );
+    }
+    throw new Error(error.message);
+  }
+}
+
+export async function startZapScan({ csrfToken, url }) {
+  try {
+    const response = await api.post(
+      "/api/scans/startScan",
+      { url },
+      {
+        headers: { "x-csrf-token": csrfToken },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(error.response.data?.message || "Failed to start scan");
     }
     throw new Error(error.message);
   }
@@ -147,25 +166,6 @@ export async function setPassword({ csrfToken, formData }) {
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Failed to set password");
-    }
-    throw new Error(error.message);
-  }
-}
-
-export async function startZapScan({ csrfToken, url }) {
-  try {
-    const response = await api.post(
-      "/api/scans/startScan",
-      { url },
-      {
-        headers: { "x-csrf-token": csrfToken },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data?.message || "Failed to start scan");
     }
     throw new Error(error.message);
   }

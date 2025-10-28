@@ -86,10 +86,10 @@ export default function Stepper({
                     disableStepIndicators={disableStepIndicators}
                     currentStep={currentStep}
                     completedSteps={completedSteps}
-                    onClickStep={(clicked) => {
+                    onClickStep={async (clicked) => {
                       if (clicked <= completedSteps + 2) {
                         if (activeStep.props.onNext) {
-                          const canProceed = activeStep.props.onNext();
+                          const canProceed = await activeStep.props.onNext();
                           if (!canProceed) return;
                         }
                         setDirection(clicked > currentStep ? 1 : -1);
@@ -101,6 +101,7 @@ export default function Stepper({
                     }}
                     stepLabel={label}
                     isNextDisabled={activeStep?.props?.isNextDisabled}
+                    isPending={activeStep?.props?.isPending}
                   />
                 )}
                 {isNotLastStep && (
@@ -146,7 +147,7 @@ export default function Stepper({
                 className="duration-350 flex items-center justify-center rounded-full bg-primary-500 py-1.5 px-3.5 font-medium tracking-tight text-white transition hover:bg-primary-600 active:bg-primary-700 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-primary-500 disabled:active:bg-primary-500"
                 {...nextButtonProps}
               >
-                {isLastStep ? "Complete" : nextButtonText}
+                {isLastStep ? "Start Scanning" : nextButtonText}
               </button>
             </div>
           </div>
@@ -241,6 +242,7 @@ function StepIndicator({
   completedSteps,
   stepLabel,
   isNextDisabled,
+  isPending,
 }) {
   const status =
     currentStep === step
@@ -249,7 +251,7 @@ function StepIndicator({
       ? "inactive"
       : "complete";
 
-  const isLocked = step > completedSteps + 2;
+  const isLocked = step > completedSteps + 2 || isPending;
 
   const handleClick = () => {
     if (
