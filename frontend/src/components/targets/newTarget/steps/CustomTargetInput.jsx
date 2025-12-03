@@ -1,5 +1,6 @@
 export default function CustomTargetInput({
   label,
+  span,
   name,
   value,
   onChange,
@@ -9,7 +10,8 @@ export default function CustomTargetInput({
   return (
     <div>
       <label htmlFor={name} className="text-lg font-semibold">
-        {label}
+        {label}{" "}
+        {span && <span className="text-gray-400 text-base ml-1">{span}</span>}
       </label>
       <input
         id={name}

@@ -10,6 +10,7 @@ const scanJobSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    targetName: { type: String },
     context: {
       languages: [{ type: String }],
       frameworks: [{ type: String }],
@@ -21,18 +22,12 @@ const scanJobSchema = new mongoose.Schema(
       enum: ["queued", "running", "completed", "failed"],
       default: "queued",
     },
-    zapScanId: {
-      type: String,
-    },
     findings: [
       {
         type: mongoose.Schema.Types.ObjectId,
         ref: "Finding",
       },
     ],
-    report: {
-      type: mongoose.Schema.Types.Mixed,
-    },
     startedAt: {
       type: Date,
       default: Date.now,

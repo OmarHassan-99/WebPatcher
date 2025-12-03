@@ -2,22 +2,24 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import Lottie from "lottie-react";
-import Stepper, { Step } from "../../../react-bits/Stepper";
-import loadingLottieAnimation from "../../../lottie/Loading - Animation.json";
-import SuccessLottieAnimation from "../../../lottie/Success.json";
-import AiProcessorLottieAnimation from "../../../lottie/Ai Processor.json";
-import { startZapScan, validateTargetURL } from "../../../utils/http";
-import useCsrf from "../../../hooks/useCsrf";
+import Stepper, { Step } from "../react-bits/Stepper";
+import loadingLottieAnimation from "../lottie/Loading - Animation.json";
+import SuccessLottieAnimation from "../lottie/Success.json";
+import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
+import { startZapScan, validateTargetURL } from "../utils/http/zap";
+import useCsrf from "../hooks/useCsrf";
 
-import TargetUrl from "./steps/TargetUrl";
-import AiContext from "./steps/AiContext";
+import TargetAndRepoURLs from "../components/targets/newTarget/steps/Target&RepoURLs";
+import AiContext from "../components/targets/newTarget/steps/AiContext";
 
-import VulnerabilityCard from "../VulnerabilityCard";
+import VulnerabilityDashboard from "../components/targets/VulnerabilityDashboard";
+import { queryClient } from "../utils/http/userAuth";
 
-export default function NewTarget() {
+export default function NewTargetPage() {
   const [formData, setFormData] = useState({
     targetUrl: "",
     githubRepoUrl: "",
+    targetName: "",
     context: { db: [], lang: [], fw: [], os: [], scm: [], ws: [] },
     isChecked: false,
   });
@@ -64,13 +66,15 @@ export default function NewTarget() {
 
   function handleStartScan() {
     setScanStage("scan");
+    queryClient.resetQueries({ queryKey: ["scans"] });
     startScanMutate(
-      { csrfToken, url: formData.targetUrl },
+      { csrfToken, url: formData.targetUrl, targetName: formData.targetName },
       {
         onSuccess: (data) => {
           setScanStage("analyze");
           setTimeout(() => {
             setScanResult(data);
+            queryClient.resetQueries({ queryKey: ["scans"] });
             setScanStage("done");
           }, 3500);
         },
@@ -125,7 +129,7 @@ export default function NewTarget() {
           isNextDisabled={!formData.targetUrl.trim() || !formData.isChecked}
           isPending={isPendingValidation}
         >
-          <TargetUrl
+          <TargetAndRepoURLs
             formData={formData}
             updateField={updateField}
             error={error}
@@ -138,7 +142,7 @@ export default function NewTarget() {
         </Step>
       </Stepper>
 
-      <div className="flex justify-center">
+      <div className="flex justify-center items-center">
         <AnimatePresence mode="wait">
           {scanStage === "scan" && (
             <Motion.div
@@ -155,7 +159,7 @@ export default function NewTarget() {
                 loop
                 autoplay
               />
-              <p className="text-lg text-primary-200 mt-2 font-medium animate-pulse">
+              <p className="text-lg mt-2 font-medium animate-pulse">
                 Scanning target for vulnerabilities…
               </p>
             </Motion.div>
@@ -176,7 +180,7 @@ export default function NewTarget() {
                 loop
                 autoplay
               />
-              <p className="text-lg text-primary-200 mt-2 font-medium animate-pulse">
+              <p className="text-lg mt-2 font-medium animate-pulse">
                 Analyzing and classifying results…
               </p>
             </Motion.div>
@@ -196,33 +200,13 @@ export default function NewTarget() {
                 className="h-48"
                 loop={false}
               />
-              <p className="text-xl text-primary-100 text-center font-semibold mb-6">
+              <p className="text-xl text-center font-semibold mb-6">
                 Vulnerability Scan Complete{" "}
-                <span className="font-bold">
-                  ({scanResult?.alerts?.length}){" "}
-                </span>
+                <span className="font-bold">({scanResult?.length}) </span>
                 vulnerabilities found
               </p>
 
-              {scanResult?.alerts?.length > 0 ? (
-                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 mx-7 mb-7">
-                  {scanResult.alerts.map((alert, i) => (
-                    <Motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      viewport={{ once: true }}
-                      transition={{ duration: 0.3, delay: 0.2 * i }}
-                    >
-                      <VulnerabilityCard alert={alert} />
-                    </Motion.div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-400 text-center">
-                  No vulnerabilities found
-                </p>
-              )}
+              {scanResult && <VulnerabilityDashboard findings={scanResult} />}
             </Motion.div>
           )}
         </AnimatePresence>

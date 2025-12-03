@@ -5,7 +5,7 @@ import Dock from "../react-bits/Dock";
 import { DOCK_ITEMS } from "../data/constants";
 import useGitHubToast from "../hooks/useGitHubToast";
 
-export default function RootLayout() {
+export default function RootPage() {
   const session = useLoaderData();
   const { user } = session;
 
@@ -28,11 +28,9 @@ export default function RootLayout() {
           />
         )}
       </div>
-      <MainNavigation />
-      <main className="flex mt-6 w-full">
-        <div className="flex-1">
-          <Outlet />
-        </div>
+      <main className="flex flex-col h-screen">
+        <MainNavigation />
+        <Outlet />
       </main>
     </div>
   );

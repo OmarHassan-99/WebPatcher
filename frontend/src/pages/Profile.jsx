@@ -7,14 +7,14 @@ import {
   changePassword,
   deleteAccount,
   setPassword,
-  unlinkGitHub,
   updateUserInfo,
-} from "../utils/http";
+} from "../utils/http/userAuth";
+import { unlinkGitHub } from "../utils/http/gitHub";
 import toast from "react-hot-toast";
 import CustomProfileButton from "../components/ui/profile/CustomProfileButton";
 import CustomProfileInput from "../components/ui/profile/CustomProfileInput";
 import GitHubButton from "../components/ui/GitHubButton";
-import { AlertTriangle } from "lucide-react";
+import DeleteModal from "../components/ui/profile/DeleteModal";
 
 export default function ProfilePage() {
   const session = useRouteLoaderData("root");
@@ -156,10 +156,10 @@ export default function ProfilePage() {
   return (
     <Motion.div
       layout
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, x: -100 }}
+      animate={{ opacity: 1, x: 0 }}
       transition={{ type: "spring", damping: 20, stiffness: 120 }}
-      className="flex items-center justify-center p-6"
+      className="flex items-center justify-center h-[100vh]"
     >
       <div className="w-full max-w-5xl bg-primary-800 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
         {/* Left Side - Nav & Avatar */}
@@ -213,10 +213,10 @@ export default function ProfilePage() {
               )}
             </div>
 
-            <h3 className="mt-4 text-xl font-semibold text-primary-100">
+            <h3 className="mt-4 text-xl font-semibold text-white">
               {formData.name}
             </h3>
-            <p className="text-primary-300">{formData.email}</p>
+            <p className="text-primary-100">{formData.email}</p>
           </div>
         </div>
 
@@ -478,61 +478,12 @@ export default function ProfilePage() {
       </div>
 
       {/* Delete Modal */}
-      <AnimatePresence>
-        {showDeleteModal && (
-          <Motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50"
-          >
-            <Motion.div
-              initial={{ opacity: 0, scale: 0.9, x: 0 }}
-              animate={{
-                opacity: 1,
-                scale: 1,
-                x: [0, -5, 5, -3, 3, 0],
-                transition: { duration: 0.6, ease: "easeInOut" },
-              }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-gray-900 text-white rounded-2xl p-8 shadow-2xl w-[90%] max-w-md border border-red-600"
-            >
-              <h3 className="text-xl font-bold text-red-400 mb-4 flex items-center gap-2">
-                <AlertTriangle size={20} className="text-red-500" /> Confirm
-                Account Deletion
-              </h3>
-
-              <p className="text-gray-300 mb-6">
-                Are you{" "}
-                <span className="text-red-400 font-semibold">
-                  absolutely sure
-                </span>{" "}
-                you want to delete your account? This will permanently erase all
-                your data and cannot be undone.
-              </p>
-
-              <div className="flex justify-end gap-4">
-                <button
-                  onClick={() => setShowDeleteModal(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-700 hover:bg-gray-600 transition-all cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <Motion.button
-                  onClick={handleDeleteAccount}
-                  disabled={isDeleting}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="px-4 py-2 rounded-lg bg-red-600 hover:bg-red-500 text-white font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
-                </Motion.button>
-              </div>
-            </Motion.div>
-          </Motion.div>
-        )}
-      </AnimatePresence>
+      <DeleteModal
+        showDeleteModal={showDeleteModal}
+        setShowDeleteModal={setShowDeleteModal}
+        handleDeleteAccount={handleDeleteAccount}
+        isDeleting={isDeleting}
+      />
     </Motion.div>
   );
 }

@@ -61,12 +61,12 @@ export default function AIContext({ formData, updateAiContext }) {
       transition={{ type: "spring", duration: 0.6 }}
       className="px-8 pb-12"
     >
-      <h2 className="text-2xl font-semibold text-primary-100 mb-6 text-center">
+      <h2 className="text-2xl font-semibold text-white mb-6 text-center">
         Select Target Context
       </h2>
 
-      <p className="text-primary-300 text-sm text-center mb-8">
-        <span className="text-primary-200 font-medium">Optional</span> — helps
+      <p className="text-primary-100 text-sm text-center mb-8">
+        <span className="text-primary-100 font-medium">Optional</span> — helps
         WebPatcher AI generate more accurate patch recommendations.
       </p>
 

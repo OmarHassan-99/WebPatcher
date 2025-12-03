@@ -1,5 +1,5 @@
 import toast from "react-hot-toast";
-import { checkSession } from "./http";
+import { checkSession } from "./http/userAuth";
 import { redirect } from "react-router-dom";
 
 export async function checkSessionLoader() {

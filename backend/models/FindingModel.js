@@ -6,7 +6,7 @@ const instanceSchema = new mongoose.Schema(
     method: String,
     param: String,
     attack: String,
-    evidence: String
+    evidence: String,
   },
   { _id: false }
 );
@@ -16,34 +16,35 @@ const findingSchema = new mongoose.Schema(
     scanJob: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "ScanJob",
-      required: true
+      required: true,
+    },
+    pluginId: {
+      type: String,
+      required: true,
+      index: true,
     },
     alertName: {
       type: String,
-      required: true
+      required: true,
     },
     severity: {
       type: String,
-      enum: ["Low", "Medium", "High", "Critical"],
-      default: "Medium"
-    },
-    cweId: {
-      type: String
+      enum: ["Informational", "Low", "Medium", "High"],
+      default: "Informational",
     },
     description: {
-      type: String
+      type: String,
     },
-    solutionText: {
-      type: String
+    solution: {
+      type: String,
     },
     instances: {
       type: [instanceSchema],
-      default: []
+      default: [],
     },
-    probableFilePaths: {
-      type: [String],
-      default: []
-    }
+    cweId: {
+      type: String,
+    },
   },
   { timestamps: true }
 );

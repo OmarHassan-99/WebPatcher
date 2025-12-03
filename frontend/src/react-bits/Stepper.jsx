@@ -60,10 +60,10 @@ export default function Stepper({
   };
 
   return (
-    <div className="flex flex-col items-center p-4 " {...rest}>
-      <div className={` w-full max-w-5xl ${stepCircleContainerClassName}`}>
+    <div className="flex flex-col items-center p-4 mt-2.5 " {...rest}>
+      <div className={`w-full max-w-5xl ${stepCircleContainerClassName}`}>
         <div
-          className={`${stepContainerClassName} flex w-full items-center p-8`}
+          className={`${stepContainerClassName} flex w-full items-center pb-8 px-8`}
         >
           {stepsArray.map((stepElement, index) => {
             const stepNumber = index + 1;
@@ -171,7 +171,7 @@ function StepContentWrapper({
       style={{ position: "relative", overflow: "hidden" }}
       animate={{ height: isCompleted ? 0 : parentHeight }}
       transition={{ type: "spring", duration: 0.4 }}
-      className={className}
+      className={`w-full ${className}`}
     >
       <AnimatePresence initial={false} mode="sync" custom={direction}>
         {!isCompleted && (
@@ -204,7 +204,13 @@ function SlideTransition({ children, direction, onHeightReady }) {
       animate="center"
       exit="exit"
       transition={{ duration: 0.4 }}
-      style={{ position: "absolute", left: 0, right: 0, top: 0 }}
+      style={{
+        position: "absolute",
+        left: 0,
+        right: 0,
+        top: 0,
+        overflow: "hidden",
+      }}
     >
       {children}
     </Motion.div>
@@ -286,7 +292,7 @@ function StepIndicator({
             },
           }}
           transition={{ duration: 0.3 }}
-          className="flex h-8 w-8 items-center justify-center rounded-full font-semibold"
+          className="flex h-8 w-8 items-center justify-center rounded-full font-semibold "
         >
           {status === "complete" ? (
             <CheckIcon className="h-4 w-4 text-black" />
@@ -311,9 +317,9 @@ function StepConnector({ isComplete }) {
   };
 
   return (
-    <div className="relative mx-2 h-0.5 flex-1 overflow-hidden rounded bg-neutral-600">
+    <div className="relative mx-2 h-0.5 flex-1 rounded bg-neutral-600">
       <Motion.div
-        className="absolute left-0 top-0 h-full"
+        className="absolute left-0 top-0 h-full "
         variants={lineVariants}
         initial={false}
         animate={isComplete ? "complete" : "incomplete"}

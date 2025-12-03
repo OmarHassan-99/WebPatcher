@@ -2,8 +2,9 @@ import ScanJob from "../models/scanJobModel.js";
 import Finding from "../models/FindingModel.js";
 //import queue from "../services/queue.js";
 import { validateUrl } from "../utils/validator.js";
-import { initiateScan as runZapScanService } from "../services/zapService.js";
 import { isHostReachable } from "../utils/network.js";
+import { runZapScanService } from "../services/zapService.js";
+import { extractZapReport } from "../services/extractor.js";
 
 export async function validateTargetURL(req, res) {
   try {
@@ -36,43 +37,35 @@ export async function validateTargetURL(req, res) {
   }
 }
 
-export async function startScan(req, res) {
+export async function startZapScan(req, res) {
+  const { url, targetName } = req.body;
+
   try {
-    const { targetURL, context = {} } = req.body;
-
-    const trimmedURL = String(targetURL || "").trim();
-    if (!trimmedURL || !validateUrl(trimmedURL)) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Invalid targetURL" });
-    }
-
+    console.log(`[ScanController] Received request to scan URL: ${url}`);
     const scan = await ScanJob.create({
       user: req.session.user._id,
-      targetUrl: trimmedURL,
-      context,
+      targetUrl: url,
+      targetName,
     });
+
+    const { report } = await runZapScanService(url, scan._id);
 
     // Uncomment lama n3mel el queue
     // if (queue && typeof queue.add === "function") {
     //   await queue.add("scan", { scanId: scan._id });
     // }
 
-    return res.status(201).json({
-      scanId: scan._id,
-      status: scan.status,
-      success: true,
-    });
-  } catch (err) {
-    console.error("startScan error:", err);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to start scan" });
+    const extractedReport = await extractZapReport(report, scan._id);
+
+    console.log("[ScanController] Scan complete. Sending report to user");
+    res.status(200).json(extractedReport);
+  } catch (error) {
+    console.error("[ScanController] An error occurred:", error);
+    res.status(500).json({ message: "Failed to complete the scan" });
   }
 }
 
-export async function listScans(req, res) {
-  console.log("list scan");
+export async function getScans(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const size = Math.min(50, parseInt(req.query.size) || 20);
@@ -153,25 +146,3 @@ export async function getFindings(req, res) {
       .json({ success: false, message: "Failed to fetch findings" });
   }
 }
-
-//zap
-export const ZapScan = async (req, res) => {
-  const { url } = req.body;
-  console.log("Received request body:", url);
-
-  if (!url) {
-    return res.status(400).json({ message: "URL is required" });
-  }
-
-  try {
-    console.log(`[ScanController] Received request to scan URL: ${url}`);
-    // We now call startScan directly
-    const report = await runZapScanService(url);
-
-    console.log("[ScanController] Scan complete. Sending report to user.");
-    res.status(200).json(report);
-  } catch (error) {
-    console.error("[ScanController] An error occurred:", error);
-    res.status(500).json({ message: "Failed to complete the scan." });
-  }
-};

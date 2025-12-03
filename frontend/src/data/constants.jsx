@@ -105,8 +105,68 @@ export const RISK_COLORS = {
   High: "text-red-500 bg-red-950/30 border-red-700/50",
 };
 
-export const CONFIDENCE_COLORS = {
-  Low: "text-yellow-400 border-yellow-500",
-  Medium: "text-orange-400 border-orange-500",
-  High: "text-green-400 border-green-500",
+export const LIST_VARIANTS = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
 };
+
+export const ITEM_VARIANTS = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+};
+
+export const CONTENT_VARIANTS = {
+  hidden: { height: 0, opacity: 0 },
+  visible: {
+    height: "auto",
+    opacity: 1,
+    transition: { duration: 0.3, ease: "easeInOut" },
+  },
+  exit: {
+    height: 0,
+    opacity: 0,
+    transition: { duration: 0.3, ease: "easeInOut" },
+  },
+};
+
+export const SEVERITY_FILTER = [
+  "All",
+  "High",
+  "Medium",
+  "Low",
+  "Informational",
+];
+
+export const SEVERITY_ORDER = {
+  High: 3,
+  Medium: 2,
+  Low: 1,
+  Informational: 0,
+};
+
+export function FORMAT_DATE(dateString) {
+  if (!dateString) return "N/A";
+  return new Date(dateString).toLocaleString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: true,
+  });
+}
+
+export function GET_STATUS_COLOR(status) {
+  switch (status?.toLowerCase()) {
+    case "queued":
+      return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
+    case "running":
+      return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    case "completed":
+      return "bg-green-500/10 text-green-400 border-green-500/20";
+    case "failed":
+      return "bg-red-500/10 text-red-400 border-red-500/20";
+    default:
+      return "bg-gray-500/10 text-gray-400 border-gray-500/20";
+  }
+}

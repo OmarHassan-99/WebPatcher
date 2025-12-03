@@ -14,7 +14,7 @@ export default function WhatWeOffer() {
         <h2 className="text-3xl sm:text-4xl font-bold text-primary-100 mb-4">
           What <span className="font-serif italic">WebPatcher</span> Offers
         </h2>
-        <p className="text-primary-300 mb-10 italic">
+        <p className="text-white mb-10 italic">
           WebPatcher — your AI-powered assistant for fixing vulnerabilities
           faster.
         </p>
@@ -41,7 +41,7 @@ export default function WhatWeOffer() {
                 autoplay
               />
               <h3 className="text-xl text-white font-semibold">{f.title}</h3>
-              <p className="text-primary-200 mt-2">{f.desc}</p>
+              <p className="text-primary-100 mt-2">{f.desc}</p>
             </Motion.div>
           ))}
         </div>

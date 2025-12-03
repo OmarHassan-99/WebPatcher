@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import CustomLink from "../ui/CustomLink";
 import { useMutation } from "@tanstack/react-query";
-import { logout } from "../../utils/http";
+import { logout } from "../../utils/http/userAuth";
 import toast from "react-hot-toast";
 import useCsrf from "../../hooks/useCsrf";
 

@@ -1,5 +1,3 @@
-"use client";
-
 import {
   motion,
   useMotionValue,
@@ -7,14 +5,7 @@ import {
   useTransform,
   AnimatePresence,
 } from "motion/react";
-import {
-  Children,
-  cloneElement,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { Children, cloneElement, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 function DockItem({
@@ -56,6 +47,7 @@ function DockItem({
       onHoverEnd={() => isHovered.set(0)}
       onFocus={() => isHovered.set(1)}
       onBlur={() => isHovered.set(0)}
+      onMouseDown={(e) => e.preventDefault()}
       onClick={onClick}
       className={`relative inline-flex items-center justify-center rounded-full bg-primary-800 border-neutral-700 border-2 shadow-md cursor-pointer ${className}`}
       tabIndex={0}
@@ -112,56 +104,43 @@ export default function Dock({
   magnification = 70,
   distance = 200,
   panelHeight = 64,
-  dockHeight = 256,
   baseItemSize = 50,
 }) {
   const mouseX = useMotionValue(Infinity);
   const isHovered = useMotionValue(0);
 
-  const maxHeight = useMemo(
-    () => Math.max(dockHeight, magnification + magnification / 2 + 4),
-    [magnification, dockHeight]
-  );
-  const heightRow = useTransform(isHovered, [0, 1], [panelHeight, maxHeight]);
-  const height = useSpring(heightRow, spring);
-
   const navigate = useNavigate();
 
   return (
     <motion.div
-      style={{ height, scrollbarWidth: "none" }}
-      className="mx-2 flex max-w-full items-center"
+      onMouseMove={({ pageX }) => {
+        isHovered.set(1);
+        mouseX.set(pageX);
+      }}
+      onMouseLeave={() => {
+        isHovered.set(0);
+        mouseX.set(Infinity);
+      }}
+      className={`${className} absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-end w-fit gap-4 rounded-2xl border-neutral-700 border-2 pb-2 px-4`}
+      style={{ height: panelHeight }}
+      role="toolbar"
+      aria-label="Application dock"
     >
-      <motion.div
-        onMouseMove={({ pageX }) => {
-          isHovered.set(1);
-          mouseX.set(pageX);
-        }}
-        onMouseLeave={() => {
-          isHovered.set(0);
-          mouseX.set(Infinity);
-        }}
-        className={`${className} absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-end w-fit gap-4 rounded-2xl border-neutral-700 border-2 pb-2 px-4`}
-        style={{ height: panelHeight }}
-        role="toolbar"
-        aria-label="Application dock"
-      >
-        {items.map((item, index) => (
-          <DockItem
-            key={index}
-            onClick={() => navigate(item.path)}
-            className={item.className}
-            mouseX={mouseX}
-            spring={spring}
-            distance={distance}
-            magnification={magnification}
-            baseItemSize={baseItemSize}
-          >
-            <DockIcon>{item.icon}</DockIcon>
-            <DockLabel>{item.label}</DockLabel>
-          </DockItem>
-        ))}
-      </motion.div>
+      {items.map((item, index) => (
+        <DockItem
+          key={index}
+          onClick={() => navigate(item.path)}
+          className={item.className}
+          mouseX={mouseX}
+          spring={spring}
+          distance={distance}
+          magnification={magnification}
+          baseItemSize={baseItemSize}
+        >
+          <DockIcon>{item.icon}</DockIcon>
+          <DockLabel>{item.label}</DockLabel>
+        </DockItem>
+      ))}
     </motion.div>
   );
 }

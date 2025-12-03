@@ -10,7 +10,7 @@ export default function ContextContainer({
 }) {
   return (
     <div>
-      <p className="text-primary-200 mb-2">{contextName}</p>
+      <p className="text-white mb-2">{contextName}</p>
       <div className="flex flex-wrap gap-2">
         {contextArr.map((ctx) => (
           <Motion.button

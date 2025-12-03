@@ -7,7 +7,7 @@ export default function FormDetails({ texts, mode, children }) {
   const [isClicked, setIsClicked] = useState(false);
 
   return (
-    <div className="flex w-full items-center justify-center">
+    <div className="flex h-screen items-center justify-center">
       <Motion.div
         variants={{
           hidden: { opacity: 0, y: 50 },

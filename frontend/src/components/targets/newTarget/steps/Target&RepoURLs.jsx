@@ -2,7 +2,12 @@ import CheckField from "./CheckField";
 import LockButton from "../../../../react-bits/LockButton";
 import CustomTargetInput from "./CustomTargetInput";
 
-export default function TargetUrl({ formData, updateField, error, setError }) {
+export default function TargetAndRepoURLs({
+  formData,
+  updateField,
+  error,
+  setError,
+}) {
   return (
     <>
       <div className="flex flex-col gap-4">
@@ -27,6 +32,15 @@ export default function TargetUrl({ formData, updateField, error, setError }) {
             setError("");
           }}
           placeholder="https://github.com/username/repo-name"
+        />
+
+        <CustomTargetInput
+          label="Target Name"
+          span="(Helps you identify the target easily)"
+          name="targetName"
+          value={formData.targetName}
+          onChange={(e) => updateField("targetName", e.target.value)}
+          placeholder="Target Name (optional)"
         />
       </div>
 

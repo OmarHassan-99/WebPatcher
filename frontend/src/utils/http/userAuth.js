@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import api from "../api/axios";
+import api from "../../api/axios";
 
 export const queryClient = new QueryClient();
 
@@ -84,73 +84,6 @@ export async function updateUserInfo({ csrfToken, formData }) {
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Update failed");
-    }
-    throw new Error(error.message);
-  }
-}
-
-export async function validateTargetURL({ csrfToken, targetURL }) {
-  try {
-    const response = await api.post(
-      "api/scans/validateTargetURL",
-      { targetURL },
-      {
-        headers: { "x-csrf-token": csrfToken },
-      }
-    );
-    const data = response.data;
-    if (!data.success) {
-      throw new Error(
-        data.message ||
-          "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
-      );
-    }
-    return data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(
-        error.response.data?.message || "Failed to validate target URL"
-      );
-    }
-    throw new Error(error.message);
-  }
-}
-
-export async function startZapScan({ csrfToken, url }) {
-  try {
-    const response = await api.post(
-      "/api/scans/startScan",
-      { url },
-      {
-        headers: { "x-csrf-token": csrfToken },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(error.response.data?.message || "Failed to start scan");
-    }
-    throw new Error(error.message);
-  }
-}
-
-export async function unlinkGitHub({ csrfToken }) {
-  try {
-    const response = await api.patch(
-      "/auth/github/unlink",
-      {},
-      {
-        headers: { "x-csrf-token": csrfToken },
-      }
-    );
-
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      throw new Error(
-        error.response.data?.message || "Failed to unlink GitHub"
-      );
     }
     throw new Error(error.message);
   }
