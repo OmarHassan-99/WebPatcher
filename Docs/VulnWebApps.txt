@@ -1,0 +1,77 @@
+1) https://github.com/aligorithm/Zero-Health
+
+Total Vulnerabilities Found: 27
+
+1. JWT Algorithm Confusion + None Algorithm Allowed
+2. Weak/Hardcoded JWT Secrets
+3. Debug Token Endpoint Exposed (alg:none tokens)
+4. No Rate Limiting on Login (brute-force)
+5. Rate Limiting Bypass via X-Forwarded-For
+6. SQL Injection (multiple endpoints)
+7. Command Injection (PDF report generation)
+8. RCE via Uploaded File Execution
+9. XXE + RCE in XML Medical History Import
+10. Directory Traversal / Arbitrary File Read
+11. Insecure Direct Object Reference (IDOR)
+12. Mass Assignment → Privilege Escalation to Admin
+13. Parameter Pollution Bypass in Profile View
+14. Stored XSS (appointments, messages, notes)
+15. Reflected XSS (/api/search)
+16. DOM-based XSS Potential in Forgot Password Page
+17. Unrestricted File Upload (allows webshells)
+18. Weak bcrypt (5 rounds)
+19. Password Reset Token Stored in DB
+20. CORS Misconfiguration (any origin + credentials)
+21. Sensitive Data Exposure (doctors endpoint leaks hashes, PII)
+22. Debug Endpoints Leak Secrets & DB Config
+23. JWT Secret Exposed in /api/info
+24. Admin Credentials Hardcoded & Exposed
+25. Swagger Docs Publicly Exposed
+26. Uploaded Files Served Publicly (webshell deployment)
+27. Full Server Compromise Possible (multiple RCE paths)
+
+Total: 27 critical/high-severity vulnerabilities
+===================================================================================================================================================================================================================================================================================
+
+
+2) https://github.com/appsecco/dvna
+
+(vulns)
+
+	'a1_injection': 'A1: Injection',
+	'a2_broken_auth': 'A2: Broken Authentication',
+	'a3_sensitive_data': 'A3: Sensitive Data Exposure',
+	'a4_xxe': 'A4: XML External Entities',
+	'a5_broken_access_control': 'A5: Broken Access Control',
+	'a6_sec_misconf': 'A6: Security Misconfiguration',
+	'a7_xss': 'A7: Cross-site Scripting',
+	'a8_ides': 'A8: Insecure Deserialization',
+	'a9_vuln_component': 'A9: Using Components with Known Vulnerabilities',
+	'a10_logging': 'A10: Insufficient Logging and Monitoring',
+	'ax_csrf': 'A8:2013  Cross-site Request Forgery',
+	'ax_redirect': 'A10:2013 Unvalidated Redirects and Forwards'
+
+
+=================================================================================================================================================================================================================================================================================
+
+3) https://github.com/vulnerable-apps/vuln_node_express
+
+(vulns)
+
+
+SQL Injection via search box. - item%' union all select * from user; -- 
+Cross Site Scripting via search box. - <script>alert("hey guy");</script>
+
+==================================================================================================================================================================================================================================================================================
+
+4) https://github.com/digininja/DVWA
+
+DVWA
+
+All possible vulns
+
+==================================================================================================================================================================================================================================================================================
+
+5) https://github.com/omaribrahimmnasrr/WebPatcherCustomWEBAPP 
+
+All possible XSS vulnerabilites
