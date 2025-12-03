@@ -1,0 +1,3 @@
+zap.bat -daemon -port 8080 -config api.key=123
+
+"C:\Program Files\Eclipse Adoptium\jdk-21.0.8.9-hotspot\bin\java.exe" -Xmx512m -jar "C:\Program Files\ZAP\Zed Attack Proxy\zap-2.16.1.jar" -daemon -port 8080 -config api.key=123
