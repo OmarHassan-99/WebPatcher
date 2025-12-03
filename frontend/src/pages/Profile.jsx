@@ -56,15 +56,6 @@ export default function ProfilePage() {
 
   function handleSubmit(e) {
     e.preventDefault();
-    // if (showField !== "password" && showField !== "setPassword" && showField !== "name&email") {
-    //   setFormData({
-    //     name: user.name || "",
-    //     email: user.email || "",
-    //     oldPassword: "",
-    //     newPassword: "",
-    //     confirmPassword: "",
-    //   });
-    // }
 
     const sendFormData =
       showField === "password"
@@ -331,10 +322,13 @@ export default function ProfilePage() {
               >
                 {user.githubUsername ? (
                   <div>
-                    <p className="text-primary-100">
-                      GitHub Username: {user.githubUsername}
+                    <p className="text-white">
+                      GitHub Username:{" "}
+                      <span className="text-primary-100">
+                        {user.githubUsername}
+                      </span>
                     </p>
-                    <p className="text-primary-100">
+                    <p className="text-white">
                       GitHub Link:{" "}
                       <a
                         href={`https://github.com/${user.githubUsername}`}

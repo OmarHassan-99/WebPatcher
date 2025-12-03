@@ -9,7 +9,7 @@ export default function CustomProfileInput({
   return (
     <>
       {label && (
-        <label className="text-primary-200 mb-1" htmlFor={name}>
+        <label className="text-white mb-1" htmlFor={name}>
           {label}
         </label>
       )}

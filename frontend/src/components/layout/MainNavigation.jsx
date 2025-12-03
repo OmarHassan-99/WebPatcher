@@ -49,7 +49,7 @@ export default function MainNavigation() {
           className="flex items-center gap-2"
         >
           <img src="/logo.svg" alt="WebPatcher Logo" className="w-8 h-8" />
-          <p>WebPatcher</p>
+          <p className="text-white">WebPatcher</p>
         </Motion.div>
       </Link>
 
