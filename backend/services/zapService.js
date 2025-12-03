@@ -58,7 +58,7 @@ while (true) {
     await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
 
     await zap.ascan.enableScanners({
-      ids: "40018,40012",
+      ids: "40018,40012,40014,40016,40017,40026,10043",
       scanpolicyname: "Default Policy",
     });
 
