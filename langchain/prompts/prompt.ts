@@ -1,12 +1,10 @@
-import { PromptTemplate } from "@langchain/core/prompts";
-
-export function createPatchPromptTemplate(): PromptTemplate {
-  const template = `You are a Senior cybersecurity expert analyzing security vulnerabilities discovered by OWASP ZAP.
+export function createPatchPrompt(findingsText: string): string {
+  return `You are a Senior cybersecurity expert analyzing security vulnerabilities discovered by OWASP ZAP.
 
 For each vulnerability below, provide detailed patch recommendations in JSON format.
 
 Vulnerability Details:
-{findings_text}
+${findingsText}
 
 For each vulnerability, respond with a JSON array containing objects with these exact fields:
 - vulnerability: The vulnerability name or type
@@ -18,8 +16,6 @@ For each vulnerability, respond with a JSON array containing objects with these 
 
 Ensure the response is valid JSON and can be parsed programmatically.
 Return ONLY the JSON array, no other text.`;
-
-  return PromptTemplate.fromTemplate(template);
 }
 
 export function formatFindingsForPrompt(findings: unknown[]): string {
