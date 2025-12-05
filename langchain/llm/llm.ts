@@ -6,7 +6,7 @@ export interface LLMConfig {
   temperature: number;
 }
 
-class OllamaLLM {
+export class OllamaClient {
   baseUrl: string;
   model: string;
   temperature: number;
@@ -17,7 +17,7 @@ class OllamaLLM {
     this.temperature = config.temperature;
   }
 
-  async call(prompt: string): Promise<string> {
+  async generate(prompt: string): Promise<string> {
     try {
       const response = await axios.post(`${this.baseUrl}/api/generate`, {
         model: this.model,
@@ -25,7 +25,6 @@ class OllamaLLM {
         temperature: this.temperature,
         stream: false,
       });
-
       return response.data.response || "";
     } catch (error) {
       throw new Error(
@@ -37,7 +36,7 @@ class OllamaLLM {
   }
 }
 
-export function initializeLLM(): OllamaLLM {
+export function initializeLLM(): OllamaClient {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
   const modelName = process.env.LLM_MODEL_NAME || "mistral";
 
@@ -47,7 +46,7 @@ export function initializeLLM(): OllamaLLM {
     temperature: parseFloat(process.env.LLM_TEMPERATURE || "0.7"),
   };
 
-  return new OllamaLLM(config);
+  return new OllamaClient(config);
 }
 
 export function getLLMConfig(): LLMConfig {
