@@ -38,7 +38,7 @@ export class OllamaClient {
 
 export function initializeLLM(): OllamaClient {
   const baseUrl = process.env.OLLAMA_BASE_URL || "http://localhost:11434";
-  const modelName = process.env.LLM_MODEL_NAME || "mistral";
+  const modelName = process.env.LLM_MODEL_NAME || "mistral"; //mistral was suggested by AI but I didn't find so I choose a temp model for now
 
   const config: LLMConfig = {
     baseUrl,

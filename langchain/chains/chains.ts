@@ -13,31 +13,32 @@ export async function executePatchChain(
 
   logger.debug("Formatted findings for LLM prompt", { findingCount: findings.length });
 
-  // Create a LangChain prompt template
+  //  LangChain prompt template (Ahmed & Shrouk should work here to improve it more)
   const promptTemplate = PromptTemplate.fromTemplate(
-    `You are a Senior cybersecurity expert analyzing security vulnerabilities discovered by OWASP ZAP.
+    `You are a Senior cybersecurity expert analyzing security vulnerabilities discovered by OWASP ZAP (Automated Vulnerability Scanner).
 
-For each vulnerability below, provide detailed patch recommendations in JSON format.
+For each vulnerability below, provide detailed patch recommendations ONLY as a valid JSON array. Do not add any markdown, code blocks, or extra text.
 
 Vulnerability Details:
 {findings_text}
 
-For each vulnerability, respond with a JSON array containing objects with these exact fields:
+Respond with ONLY a JSON array (no markdown, no code blocks) with objects containing these exact fields:
 - vulnerability: The vulnerability name or type
-- risk: Assessment of risk level (High, Medium, or Low)
-- url: The URL where the vulnerability was found
-- analysis: Your expert analysis of the vulnerability and its potential impact
+- risk: Risk level (High, Medium, or Low)
+- url: The URL where vulnerability was found
+- analysis: Expert security analysis of the vulnerability and its impact
 - patchRecommendation: Specific steps to fix this vulnerability
-- secureCodeExample: A code snippet showing the secure fix
+- secureCodeExample: Code snippet showing the secure fix
 
-Ensure the response is valid JSON and can be parsed programmatically.
-Return ONLY the JSON array, no other text.`
+Example format (without the backticks - return valid JSON only):
+["vulnerability": "Cross Site Scripting (Stored)", "risk": "High", "url": "https://example.com/post", "analysis": "...", "patchRecommendation": "...", "secureCodeExample": "..."]
+
+Important: Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
   );
 
   try {
     logger.debug("Building LangChain prompt template");
     
-    // Format the prompt using LangChain template
     const formattedPrompt = await promptTemplate.format({
       findings_text: findingsText,
     });
@@ -46,10 +47,31 @@ Return ONLY the JSON array, no other text.`
     const rawResult = await llmClient.generate(formattedPrompt);
 
     logger.debug("Parsing LLM response as JSON");
-    const result = JSON.parse(rawResult);
+    
+    // Clean up the response - remove markdown code blocks if present
+    let cleanedResult = rawResult.trim();
+    if (cleanedResult.startsWith("```json")) {
+      cleanedResult = cleanedResult.replace(/^```json\n?/, "").replace(/\n?```$/, "");
+    } else if (cleanedResult.startsWith("```")) {
+      cleanedResult = cleanedResult.replace(/^```\n?/, "").replace(/\n?```$/, "");
+    }
+    
+    // Parse JSON with error handling
+    let result;
+    try {
+      result = JSON.parse(cleanedResult);
+    } catch (parseError) {
+      // If JSON parsing fails, try to extract JSON from the response
+      const jsonMatch = cleanedResult.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        result = JSON.parse(jsonMatch[0]);
+      } else {
+        throw parseError;
+      }
+    }
 
-    logger.info("Chain execution completed successfully", { resultCount: result.length });
-    return result;
+    logger.info("Chain execution completed successfully", { resultCount: Array.isArray(result) ? result.length : 1 });
+    return Array.isArray(result) ? result : [result];
   } catch (error) {
     logger.error("Chain execution failed", error);
     throw error;
