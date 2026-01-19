@@ -69,8 +69,8 @@ export async function runZapScanService(targetUrl, scanJobId) {
     await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
 
     await zap.ascan.enableScanners({
-      // XSS With all its types for now 
-      ids: "40018,40012,40014,40016,40017,10043",
+
+      ids: "40018,40012,40014,40016,40017",
       scanpolicyname: "Default Policy",
     });
 
@@ -96,10 +96,13 @@ export async function runZapScanService(targetUrl, scanJobId) {
       params: {
         baseurl: targetUrl,
         start: 0,
-        count: 9999,
+        count: 1000,
       },
     }
   );
+
+  console.log("Starting a new ZAP session to cleanup...");
+  await zap.core.newSession({});
 
   return { report: alerts.data };
 }
