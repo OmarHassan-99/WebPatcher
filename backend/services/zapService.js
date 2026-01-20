@@ -11,8 +11,6 @@ const zapOptions = {
 };
 
 const zap = new ZapClient(zapOptions);
-console.log("Starting a new ZAP session to ensure a clean state...");
-await zap.core.newSession({});
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -24,6 +22,14 @@ export async function runZapScanService(targetUrl, scanJobId) {
   await ScanJob.findByIdAndUpdate(scanJobId, {
     $set: { status: "running" },
   });
+
+  try {
+    console.log("Starting a new ZAP session to cleanup...");
+    await zap.core.newSession({});
+  } catch (err) {
+    console.error("Failed to initialize ZAP session:", err);
+    throw err;
+  }
 
   try {
     //Classic spider
@@ -60,7 +66,7 @@ export async function runZapScanService(targetUrl, scanJobId) {
   } catch (err) {
     console.warn(
       "[ZapService] Spidering error (continuing):",
-      err?.message || err
+      err?.message || err,
     );
   }
 
@@ -69,8 +75,7 @@ export async function runZapScanService(targetUrl, scanJobId) {
     await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
 
     await zap.ascan.enableScanners({
-      // XSS With all its types for now 
-      ids: "40018,40012,40014,40016,40017,10043",
+      ids: "40018,40012,40014,40016,40017",
       scanpolicyname: "Default Policy",
     });
 
@@ -96,9 +101,9 @@ export async function runZapScanService(targetUrl, scanJobId) {
       params: {
         baseurl: targetUrl,
         start: 0,
-        count: 9999,
+        count: 1000,
       },
-    }
+    },
   );
 
   return { report: alerts.data };

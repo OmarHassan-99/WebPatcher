@@ -70,7 +70,7 @@ const LightRays = ({
         const entry = entries[0];
         setIsVisible(entry.isIntersecting);
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     observerRef.current.observe(containerRef.current);
@@ -157,10 +157,10 @@ float rayStrength(vec2 raySource, vec2 rayRefDirection, vec2 coord,
   float spreadFactor = pow(max(distortedAngle, 0.0), 1.0 / max(lightSpread, 0.001));
 
   float distance = length(sourceToCoord);
-  float maxDistance = iResolution.x * rayLength;
+  float maxDistance = max(iResolution.x, iResolution.y) * rayLength;
   float lengthFalloff = clamp((maxDistance - distance) / maxDistance, 0.0, 1.0);
   
-  float fadeFalloff = clamp((iResolution.x * fadeDistance - distance) / (iResolution.x * fadeDistance), 0.5, 1.0);
+  float fadeFalloff = clamp((max(iResolution.x, iResolution.y) * fadeDistance - distance) / (max(iResolution.x, iResolution.y) * fadeDistance), 0.5, 1.0);
   float pulse = pulsating > 0.5 ? (0.8 + 0.2 * sin(iTime * speed * 3.0)) : 1.0;
 
   float baseStrength = clamp(

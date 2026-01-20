@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   CONTENT_VARIANTS,
   ITEM_VARIANTS,
@@ -8,22 +8,26 @@ import { ChevronDown, ShieldAlert } from "lucide-react";
 import VulnerabilityCard from "./VulnerabilityCard";
 import { motion as Motion, AnimatePresence } from "motion/react";
 
-export default function FindingRow({ finding }) {
+export default function FindingRow({ finding, forceOpen }) {
   const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    setIsOpen(forceOpen);
+  }, [forceOpen]);
 
   return (
     <Motion.div
       variants={ITEM_VARIANTS}
       layout
-      transition={{ type: "spring" }}
+      transition={{ type: "spring", stiffness: 50 }}
       className="p-4 border border-gray-700 rounded-2xl mx-10 my-4 bg-gray-900"
     >
       <div
         className="flex justify-between items-center cursor-pointer"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => setIsOpen((prev) => !prev)}
       >
         <div className="flex items-center gap-2">
-          <ShieldAlert size={24} className="text-primary-100" />
+          <ShieldAlert size={24} className="hidden sm:block text-primary-100" />
           <h2 className="text-xl font-semibold text-primary-100">
             {finding.alertName} ({finding.count}) {""}
             <span

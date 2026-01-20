@@ -1,10 +1,11 @@
 import express from "express";
 import cors from "cors";
-import connectDB from "./config/db.js";
 import MongoStore from "connect-mongo";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
+import connectDB from "./config/db.js";
+import { resetStalledScans } from "./services/cleanupService.js";
 
 import userRouter from "./routes/userRoute.js";
 import scanRouter from "./routes/scanRoutes.js";
@@ -40,7 +41,7 @@ app.use(
       secure: false, // set true if using https
       sameSite: "lax",
     },
-  })
+  }),
 );
 
 const { generateCsrfToken, doubleCsrfProtection, invalidCsrfTokenError } =
@@ -72,5 +73,7 @@ app.use((err, req, res, next) => {
   }
   next(err);
 });
+
+await resetStalledScans();
 
 app.listen(PORT, () => console.log("Server started on port " + PORT));

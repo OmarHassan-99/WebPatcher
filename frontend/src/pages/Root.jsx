@@ -28,7 +28,7 @@ export default function RootPage() {
           />
         )}
       </div>
-      <main className="flex flex-col h-screen">
+      <main className="flex flex-1 flex-col">
         <MainNavigation />
         <Outlet />
       </main>

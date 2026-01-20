@@ -1,19 +1,13 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { AnimatePresence, motion as Motion } from "framer-motion";
-import Lottie from "lottie-react";
 import Stepper, { Step } from "../react-bits/Stepper";
-import loadingLottieAnimation from "../lottie/Loading - Animation.json";
-import SuccessLottieAnimation from "../lottie/Success.json";
-import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import { startZapScan, validateTargetURL } from "../utils/http/zap";
+import { queryClient } from "../utils/http/userAuth";
 import useCsrf from "../hooks/useCsrf";
 
 import TargetAndRepoURLs from "../components/targets/newTarget/steps/Target&RepoURLs";
 import AiContext from "../components/targets/newTarget/steps/AiContext";
-
-import VulnerabilityDashboard from "../components/targets/VulnerabilityDashboard";
-import { queryClient } from "../utils/http/userAuth";
+import TargetDetailsPage from "./TargetDetails";
 
 export default function NewTargetPage() {
   const [formData, setFormData] = useState({
@@ -44,7 +38,7 @@ export default function NewTargetPage() {
             } else {
               setError(
                 res.message ||
-                  "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
+                  "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)",
               );
               resolve(false);
             }
@@ -53,11 +47,11 @@ export default function NewTargetPage() {
             console.error(err);
             setError(
               err.message ||
-                "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)"
+                "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)",
             );
             resolve(false);
           },
-        }
+        },
       );
     });
   }
@@ -83,7 +77,7 @@ export default function NewTargetPage() {
           setError("Failed to start scan");
           setScanStage(null);
         },
-      }
+      },
     );
   }
 
@@ -107,15 +101,9 @@ export default function NewTargetPage() {
               ...prev.context,
               [name]: [...prev.context[name], value],
             },
-          }
+          },
     );
   }
-
-  const fadeVariant = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6 } },
-    exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
-  };
 
   return (
     <div className="text-white">
@@ -142,75 +130,9 @@ export default function NewTargetPage() {
         </Step>
       </Stepper>
 
-      <div className="flex justify-center items-center">
-        <AnimatePresence mode="wait">
-          {scanStage === "scan" && (
-            <Motion.div
-              key="scan"
-              variants={fadeVariant}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex flex-col"
-            >
-              <Lottie
-                animationData={loadingLottieAnimation}
-                className="h-56"
-                loop
-                autoplay
-              />
-              <p className="text-lg mt-2 font-medium animate-pulse">
-                Scanning target for vulnerabilities…
-              </p>
-            </Motion.div>
-          )}
-
-          {scanStage === "analyze" && (
-            <Motion.div
-              key="analyze"
-              variants={fadeVariant}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex flex-col items-center"
-            >
-              <Lottie
-                animationData={AiProcessorLottieAnimation}
-                className="h-56"
-                loop
-                autoplay
-              />
-              <p className="text-lg mt-2 font-medium animate-pulse">
-                Analyzing and classifying results…
-              </p>
-            </Motion.div>
-          )}
-
-          {scanStage === "done" && (
-            <Motion.div
-              key="done"
-              variants={fadeVariant}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="flex flex-col w-full"
-            >
-              <Lottie
-                animationData={SuccessLottieAnimation}
-                className="h-48"
-                loop={false}
-              />
-              <p className="text-xl text-center font-semibold mb-6">
-                Vulnerability Scan Complete{" "}
-                <span className="font-bold">({scanResult?.length}) </span>
-                vulnerabilities found
-              </p>
-
-              {scanResult && <VulnerabilityDashboard findings={scanResult} />}
-            </Motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+      {scanStage !== null && (
+        <TargetDetailsPage scanStage={scanStage} scanResult={scanResult} />
+      )}
     </div>
   );
 }

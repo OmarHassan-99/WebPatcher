@@ -13,6 +13,7 @@ import TargetsPage from "./pages/Targets";
 import NewTargetPage from "./pages/NewTarget";
 import NotFoundPage from "./pages/NotFound";
 import ErrorPage from "./pages/Error";
+import TargetDetailsPage from "./pages/TargetDetails";
 
 function App() {
   const router = createBrowserRouter([
@@ -45,6 +46,11 @@ function App() {
         {
           path: "targets/new",
           element: <NewTargetPage />,
+          loader: checkAuthLoader,
+        },
+        {
+          path: "targets/:targetId",
+          element: <TargetDetailsPage />,
           loader: checkAuthLoader,
         },
         {

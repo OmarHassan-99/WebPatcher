@@ -5,6 +5,7 @@ import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
 import { runZapScanService } from "../services/zapService.js";
 import { extractZapReport } from "../services/extractor.js";
+import mongoose from "mongoose";
 
 export async function validateTargetURL(req, res) {
   try {
@@ -39,6 +40,7 @@ export async function validateTargetURL(req, res) {
 
 export async function startZapScan(req, res) {
   const { url, targetName } = req.body;
+  let scanJobId = null;
 
   try {
     console.log(`[ScanController] Received request to scan URL: ${url}`);
@@ -47,6 +49,7 @@ export async function startZapScan(req, res) {
       targetUrl: url,
       targetName,
     });
+    scanJobId = scan._id;
 
     const { report } = await runZapScanService(url, scan._id);
 
@@ -61,6 +64,14 @@ export async function startZapScan(req, res) {
     res.status(200).json(extractedReport);
   } catch (error) {
     console.error("[ScanController] An error occurred:", error);
+    if (scanJobId) {
+      await ScanJob.findByIdAndUpdate(scanJobId, {
+        $set: {
+          status: "failed",
+          finishedAt: Date.now(),
+        },
+      });
+    }
     res.status(500).json({ message: "Failed to complete the scan" });
   }
 }
@@ -88,57 +99,61 @@ export async function getScans(req, res) {
   }
 }
 
-export async function getScan(req, res) {
+export async function deleteScan(req, res) {
   try {
     const { scanId } = req.params;
-    const scan = await ScanJob.findById(scanId).lean();
-    if (!scan)
+    if (!mongoose.Types.ObjectId.isValid(scanId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Scan ID format" });
+    }
+
+    const scan = await ScanJob.findById(scanId);
+    if (!scan) {
       return res
         .status(404)
         .json({ success: false, message: "Scan not found" });
-    if (String(scan.user) !== String(req.session.user._id))
+    }
+
+    if (String(scan.user) !== String(req.session.user._id)) {
       return res.status(403).json({ success: false, message: "Forbidden" });
+    }
 
-    const findingsCount = Array.isArray(scan.findings)
-      ? scan.findings.length
-      : 0;
-
-    return res.json({
-      scanId: scan._id,
-      targetUrl: scan.targetUrl,
-      status: scan.status,
-      zapScanId: scan.zapScanId || null,
-      startedAt: scan.startedAt,
-      finishedAt: scan.finishedAt,
-      findingsCount,
-      success: true,
-    });
+    await ScanJob.findByIdAndDelete(scanId);
+    return res.json({ success: true, message: "Scan deleted successfully" });
   } catch (err) {
-    console.error("getScan error:", err);
+    console.error("deleteScan error:", err);
     return res
       .status(500)
-      .json({ success: false, message: "Failed to get scan" });
+      .json({ success: false, message: "Failed to delete scan" });
   }
 }
 
 export async function getFindings(req, res) {
   try {
     const { scanId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(scanId)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Scan ID format" });
+    }
+
     const scan = await ScanJob.findById(scanId).lean();
-    if (!scan)
+    if (!scan) {
       return res
         .status(404)
         .json({ success: false, message: "Scan not found" });
-    if (String(scan.user) !== String(req.session.user._id))
+    }
+
+    if (String(scan.user) !== String(req.session.user._id)) {
       return res.status(403).json({ success: false, message: "Forbidden" });
+    }
+
     const findings = await Finding.find({ scanJob: scanId })
-      .select(
-        "alertName severity cweId description probableFilePaths createdAt"
-      )
       .sort({ severity: -1, createdAt: -1 })
       .lean();
 
-    return res.json({ scanId, findings });
+    return res.json({ findings, status: scan.status });
   } catch (err) {
     console.error("getFindings error:", err);
     return res
