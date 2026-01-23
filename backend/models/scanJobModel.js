@@ -19,7 +19,7 @@ const scanJobSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["queued", "running", "completed", "failed"],
+      enum: ["queued", "running", "completed", "Analyzing", "Patching", "failed"],
       default: "queued",
     },
     findings: [

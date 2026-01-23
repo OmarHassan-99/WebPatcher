@@ -38,7 +38,7 @@ Important: Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
 
   try {
     logger.debug("Building LangChain prompt template");
-    
+
     const formattedPrompt = await promptTemplate.format({
       findings_text: findingsText,
     });
@@ -46,32 +46,10 @@ Important: Return ONLY valid JSON. No markdown. No code blocks. No extra text.`
     logger.debug("Executing Ollama LLM via LangChain");
     const rawResult = await llmClient.generate(formattedPrompt);
 
-    logger.debug("Parsing LLM response as JSON");
-    
-    // Clean up the response - remove markdown code blocks if present
-    let cleanedResult = rawResult.trim();
-    if (cleanedResult.startsWith("```json")) {
-      cleanedResult = cleanedResult.replace(/^```json\n?/, "").replace(/\n?```$/, "");
-    } else if (cleanedResult.startsWith("```")) {
-      cleanedResult = cleanedResult.replace(/^```\n?/, "").replace(/\n?```$/, "");
-    }
-    
-    // Parse JSON with error handling
-    let result;
-    try {
-      result = JSON.parse(cleanedResult);
-    } catch (parseError) {
-      // If JSON parsing fails, try to extract JSON from the response
-      const jsonMatch = cleanedResult.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[0]);
-      } else {
-        throw parseError;
-      }
-    }
+    logger.debug("Received LLM response", { length: rawResult.length });
 
-    logger.info("Chain execution completed successfully", { resultCount: Array.isArray(result) ? result.length : 1 });
-    return Array.isArray(result) ? result : [result];
+    // Return the raw result as is (wrapped in array to match signature)
+    return [rawResult];
   } catch (error) {
     logger.error("Chain execution failed", error);
     throw error;
