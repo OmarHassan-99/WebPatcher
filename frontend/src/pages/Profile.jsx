@@ -40,8 +40,8 @@ export default function ProfilePage() {
       showField === "password"
         ? changePassword
         : showField === "setPassword"
-        ? setPassword
-        : updateUserInfo,
+          ? setPassword
+          : updateUserInfo,
   });
   const { mutate: unlink, isPending: isSubmittingUnlink } = useMutation({
     mutationFn: unlinkGitHub,
@@ -65,14 +65,14 @@ export default function ProfilePage() {
             confirmPassword: formData.confirmPassword,
           }
         : showField === "setPassword"
-        ? {
-            password: formData.newPassword,
-            confirmPassword: formData.confirmPassword,
-          }
-        : {
-            name: formData.name,
-            email: formData.email,
-          };
+          ? {
+              password: formData.newPassword,
+              confirmPassword: formData.confirmPassword,
+            }
+          : {
+              name: formData.name,
+              email: formData.email,
+            };
 
     update(
       {
@@ -91,7 +91,7 @@ export default function ProfilePage() {
         onError: (error) => {
           toast.error(error.message || "Failed to update profile");
         },
-      }
+      },
     );
   }
 
@@ -102,7 +102,7 @@ export default function ProfilePage() {
         onSuccess: (data) => {
           session.user = data.user;
           toast.success(
-            data.message || "GitHub account unlinked successfully!"
+            data.message || "GitHub account unlinked successfully!",
           );
         },
         onError: (error) => {
@@ -111,7 +111,7 @@ export default function ProfilePage() {
             setShowField("setPassword");
           }
         },
-      }
+      },
     );
   }
 
@@ -127,7 +127,7 @@ export default function ProfilePage() {
         onError: (err) => {
           toast.error(err.message || "Failed to delete account");
         },
-      }
+      },
     );
   }
 
@@ -159,9 +159,9 @@ export default function ProfilePage() {
       initial={{ opacity: 0, x: -100 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ type: "spring", damping: 20, stiffness: 120 }}
-      className="flex items-center justify-center h-[100vh]"
+      className="flex justify-center mx-5 my-6 md:my-10"
     >
-      <div className="w-full max-w-5xl bg-primary-800 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
+      <div className="max-w-5xl bg-primary-800 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
         {/* Left Side - Nav & Avatar */}
         <div className="flex flex-col justify-between md:w-1/3 text-center">
           {/* Tab Switch */}
