@@ -5,6 +5,7 @@ import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
 import { runZapScanService } from "../services/zapService.js";
 import { extractZapReport } from "../services/extractor.js";
+import { generatePatchesForFindings, isLangChainApiHealthy } from "../services/patchService.js";
 import mongoose from "mongoose";
 
 export async function validateTargetURL(req, res) {
@@ -61,7 +62,14 @@ export async function startZapScan(req, res) {
     const extractedReport = await extractZapReport(report, scan._id);
 
     console.log("[ScanController] Scan complete. Sending report to user");
+
+    // Send response immediately so user sees results
     res.status(200).json(extractedReport);
+
+    // Generate patches in background (don't await - runs after response)
+    console.log("[ScanController] Starting patch generation in background...");
+    generatePatchesInBackground(extractedReport, scanJobId);
+
   } catch (error) {
     console.error("[ScanController] An error occurred:", error);
     if (scanJobId) {
@@ -75,6 +83,71 @@ export async function startZapScan(req, res) {
     res.status(500).json({ message: "Failed to complete the scan" });
   }
 }
+
+async function generatePatchesInBackground(findings, scanJobId) {
+  try {
+    // Check if LangChain API is running
+    const isHealthy = await isLangChainApiHealthy();
+    if (!isHealthy) {
+      console.log("[ScanController] LangChain API not available - skipping patch generation");
+      console.log("[ScanController] To enable patches, run: cd langchain && npm run server");
+      return;
+    }
+
+    console.log(`[ScanController] Generating patches for ${findings.length} finding(s)...`);
+
+    const patchResult = await generatePatchesForFindings(findings, "Medium");
+
+    if (patchResult.success) {
+      const successCount = patchResult.patches.filter(p => p.success).length;
+      const failedCount = patchResult.patches.filter(p => !p.success).length;
+
+      console.log(`[ScanController] Attempted ${patchResult.patches.length} patches: ${successCount} succeeded, ${failedCount} failed`);
+
+
+      console.log("\n" + "=".repeat(80));
+      console.log(" AI-GENERATED PATCHES");
+      console.log("=".repeat(80));
+
+      let patchNum = 0;
+      for (const patchData of patchResult.patches) {
+        if (patchData.success && patchData.patch) {
+          patchNum++;
+          console.log(`\n [${patchNum}] ${patchData.vulnerability.alert_name}`);
+          console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
+          console.log(`   URL: ${patchData.vulnerability.affected_url}`);
+          console.log("-".repeat(60));
+          console.log(`    ANALYSIS:`);
+          console.log(`   ${patchData.patch.analysis}`);
+          console.log(`\n    ROOT CAUSE:`);
+          console.log(`   ${patchData.patch.root_cause}`);
+          console.log(`\n    FILE TYPE: ${patchData.patch.file_type}`);
+          console.log(`\n    SUGGESTED FIX:`);
+          console.log(`   ${patchData.patch.suggested_fix}`);
+          console.log("-".repeat(60));
+
+          // Database saving disabled for now
+          // await Finding.findOneAndUpdate(
+          //   { scanJob: scanJobId, alertName: patchData.vulnerability.alert_name },
+          //   { $set: { patch: patchData.patch, patchGeneratedAt: new Date() } }
+          // );
+        } else if (!patchData.success) {
+          console.log(`\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`);
+          console.log(`   Error: ${patchData.error}`);
+        }
+      }
+
+      console.log("\n" + "=".repeat(80));
+      console.log(` ${successCount}/${patchResult.patches.length} patches generated successfully`);
+      console.log("=".repeat(80) + "\n");
+    } else {
+      console.error("[ScanController] Patch generation failed:", patchResult.error);
+    }
+  } catch (error) {
+    console.error("[ScanController] Background patch generation error:", error.message);
+  }
+}
+
 
 export async function getScans(req, res) {
   try {

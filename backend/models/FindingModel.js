@@ -11,6 +11,18 @@ const instanceSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// If we will store it in the database later
+/*
+const patchSchema = new mongoose.Schema(
+  {
+    analysis: String,
+    root_cause: String,
+    suggested_fix: String,
+    file_type: String,
+  },
+  { _id: false }
+);
+*/
 const findingSchema = new mongoose.Schema(
   {
     scanJob: {
@@ -45,6 +57,15 @@ const findingSchema = new mongoose.Schema(
     cweId: {
       type: String,
     },
+    // AI-generated patch recommendation
+    // patch: {
+    //   type: patchSchema,
+    //   default: null,
+    // },
+    // patchGeneratedAt: {
+    //   type: Date,
+    //   default: null,
+    // },
   },
   { timestamps: true }
 );
