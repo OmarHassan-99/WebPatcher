@@ -5,7 +5,10 @@ import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
 import { runZapScanService } from "../services/zapService.js";
 import { extractZapReport } from "../services/extractor.js";
-import { generatePatchesForFindings, isLangChainApiHealthy } from "../services/patchService.js";
+import {
+  generatePatchesForFindings,
+  isLangChainApiHealthy,
+} from "../services/patchService.js";
 import mongoose from "mongoose";
 
 export async function validateTargetURL(req, res) {
@@ -69,7 +72,6 @@ export async function startZapScan(req, res) {
     // Generate patches in background (don't await - runs after response)
     console.log("[ScanController] Starting patch generation in background...");
     generatePatchesInBackground(extractedReport, scanJobId);
-
   } catch (error) {
     console.error("[ScanController] An error occurred:", error);
     if (scanJobId) {
@@ -89,21 +91,28 @@ async function generatePatchesInBackground(findings, scanJobId) {
     // Check if LangChain API is running
     const isHealthy = await isLangChainApiHealthy();
     if (!isHealthy) {
-      console.log("[ScanController] LangChain API not available - skipping patch generation");
-      console.log("[ScanController] To enable patches, run: cd langchain && npm run server");
+      console.log(
+        "[ScanController] LangChain API not available - skipping patch generation",
+      );
+      console.log(
+        "[ScanController] To enable patches, run: cd langchain && npm run server",
+      );
       return;
     }
 
-    console.log(`[ScanController] Generating patches for ${findings.length} finding(s)...`);
+    console.log(
+      `[ScanController] Generating patches for ${findings.length} finding(s)...`,
+    );
 
-    const patchResult = await generatePatchesForFindings(findings, "Medium");
+    const patchResult = await generatePatchesForFindings(findings);
 
     if (patchResult.success) {
-      const successCount = patchResult.patches.filter(p => p.success).length;
-      const failedCount = patchResult.patches.filter(p => !p.success).length;
+      const successCount = patchResult.patches.filter((p) => p.success).length;
+      const failedCount = patchResult.patches.filter((p) => !p.success).length;
 
-      console.log(`[ScanController] Attempted ${patchResult.patches.length} patches: ${successCount} succeeded, ${failedCount} failed`);
-
+      console.log(
+        `[ScanController] Attempted ${patchResult.patches.length} patches: ${successCount} succeeded, ${failedCount} failed`,
+      );
 
       console.log("\n" + "=".repeat(80));
       console.log(" AI-GENERATED PATCHES");
@@ -132,22 +141,31 @@ async function generatePatchesInBackground(findings, scanJobId) {
           //   { $set: { patch: patchData.patch, patchGeneratedAt: new Date() } }
           // );
         } else if (!patchData.success) {
-          console.log(`\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`);
+          console.log(
+            `\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`,
+          );
           console.log(`   Error: ${patchData.error}`);
         }
       }
 
       console.log("\n" + "=".repeat(80));
-      console.log(` ${successCount}/${patchResult.patches.length} patches generated successfully`);
+      console.log(
+        ` ${successCount}/${patchResult.patches.length} patches generated successfully`,
+      );
       console.log("=".repeat(80) + "\n");
     } else {
-      console.error("[ScanController] Patch generation failed:", patchResult.error);
+      console.error(
+        "[ScanController] Patch generation failed:",
+        patchResult.error,
+      );
     }
   } catch (error) {
-    console.error("[ScanController] Background patch generation error:", error.message);
+    console.error(
+      "[ScanController] Background patch generation error:",
+      error.message,
+    );
   }
 }
-
 
 export async function getScans(req, res) {
   try {

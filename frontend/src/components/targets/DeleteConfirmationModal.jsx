@@ -51,7 +51,7 @@ export default function DeleteConfirmationModal({
             <p className="text-gray-400 mt-2 text-sm">
               Are you sure you want to delete the scan for{" "}
               <span className="text-primary-100 font-semibold">
-                {targetName}
+                {targetName || "this target"}
               </span>
               ? This action cannot be undone.
             </p>
