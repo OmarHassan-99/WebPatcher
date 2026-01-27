@@ -13,7 +13,7 @@ export default function Footer() {
       className="w-full border-t border-primary-700 px-5 py-7 text-primary-200"
     >
       <div className="flex items-center justify-between">
-        <p className="text-sm text-primary-100 text-left">
+        <p className="text-sm text-white text-left">
           © {currentYear} WebPatcher. All rights reserved.
         </p>
         <div className="flex gap-6">
@@ -21,7 +21,7 @@ export default function Footer() {
             href="https://github.com/abdullah12q"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-primary-100 transition"
+            className="text-white hover:text-primary-100 transition"
           >
             <Github className="w-5 h-5" />
           </a>
@@ -29,7 +29,7 @@ export default function Footer() {
             href="https://linkedin.com/in/abdullah-mohamed-1q1q"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-primary-100 transition"
+            className="text-white hover:text-primary-100 transition"
           >
             <Linkedin className="w-5 h-5" />
           </a>
@@ -37,7 +37,7 @@ export default function Footer() {
             href="https://facebook.com"
             target="_blank"
             rel="noopener noreferrer"
-            className="hover:text-primary-100 transition"
+            className="text-white hover:text-primary-100 transition"
           >
             <Facebook className="w-5 h-5" />
           </a>

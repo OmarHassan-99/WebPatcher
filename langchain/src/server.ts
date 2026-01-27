@@ -68,12 +68,25 @@ app.post("/generate-patches", async (req, res) => {
         });
 
         // Combine with original finding info
-        const patches = results.map((result, index) => ({
-            vulnerability: vulnerabilities[index],
-            ...(result.success
-                ? { success: true, patch: result.data }
-                : { success: false, error: result.error }),
-        }));
+        const patches = results.map((result, index) => {
+            const vulnerability = vulnerabilities[index];
+
+            if (result.success) {
+                return {
+                    vulnerability,
+                    success: true as const,
+                    patch: result.data
+                };
+            }
+
+            // TypeScript now knows this is the error branch
+            const errorResult = result as { success: false; error: string };
+            return {
+                vulnerability,
+                success: false as const,
+                error: errorResult.error
+            };
+        });
 
         const successCount = patches.filter(p => p.success).length;
         logger.info(`[LangChain API] Generated ${successCount} patches successfully`);
@@ -95,7 +108,7 @@ app.post("/generate-patches", async (req, res) => {
                 console.log(`\n   FILE TYPE: ${patchData.patch.file_type}`);
                 console.log(`\n   SUGGESTED FIX:\n   ${patchData.patch.suggested_fix}`);
                 console.log("-".repeat(60));
-            } else if (!patchData.success && 'error' in patchData) {
+            } else if (!patchData.success) {
                 console.log(`\nFAILED: ${patchData.vulnerability.alert_name}`);
                 console.log(`   Error: ${patchData.error}`);
             }

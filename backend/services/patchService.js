@@ -1,5 +1,5 @@
-import axios from "axios";
 import "dotenv/config.js";
+import axios from "axios";
 
 const LANGCHAIN_API_URL = process.env.LANGCHAIN_API_URL;
 
