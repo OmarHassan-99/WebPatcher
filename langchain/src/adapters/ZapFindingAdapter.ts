@@ -1,5 +1,5 @@
-import { ZapFindingSchema, VulnerabilityInputSchema } from "./schemas";
-import type { ZapFinding, VulnerabilityInput, ZapInstance } from "./schemas";
+import { ZapFindingSchema, VulnerabilityInputSchema } from "../schemas";
+import type { ZapFinding, VulnerabilityInput, ZapInstance } from "../schemas";
 
 /**
  * ZapFindingAdapter - Converts ZAP extractor output to PatchGenerator input

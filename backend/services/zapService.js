@@ -50,7 +50,14 @@ export async function runZapScanService(targetUrl, scanJobId) {
     while (true) {
       const stat = await zap.ajaxSpider.status();
       const statusText = stat.status || stat; // depends on zaproxy client version
-      console.log(`[ZapService] AJAX Spider status: ${statusText}`);
+
+      try {
+        const numResults = await zap.ajaxSpider.numberOfResults();
+        const count = numResults.numberOfResults || numResults;
+        console.log(`[ZapService] AJAX Spider status: ${statusText}, found ${count} resources`);
+      } catch (e) {
+        console.log(`[ZapService] AJAX Spider status: ${statusText}`);
+      }
 
       if (
         statusText === "stopped" ||
@@ -61,7 +68,7 @@ export async function runZapScanService(targetUrl, scanJobId) {
         break;
       }
 
-      await sleep(1000);
+      await sleep(5000);
     }
   } catch (err) {
     console.warn(

@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
-import { PatchGenerator } from "./PatchGenerator";
-import { ZapFindingAdapter } from "./ZapFindingAdapter";
+import { PatchGenerator } from "./services/PatchGenerator";
+import { ZapFindingAdapter } from "./adapters/ZapFindingAdapter";
 import { logger } from "../logging/logger";
 import type { ZapFinding } from "./types";
 

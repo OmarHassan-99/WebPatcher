@@ -21,8 +21,8 @@
  */
 
 // Main classes
-export { PatchGenerator } from "./PatchGenerator";
-export { ZapFindingAdapter } from "./ZapFindingAdapter";
+export { PatchGenerator } from "./services/PatchGenerator";
+export { ZapFindingAdapter } from "./adapters/ZapFindingAdapter";
 
 // Types
 export type {

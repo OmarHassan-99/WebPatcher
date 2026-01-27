@@ -1,8 +1,8 @@
 import { ChatOllama } from "@langchain/ollama";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { VulnerabilityInputSchema, PatchOutputSchema } from "./schemas";
-import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "./types";
-import { PatchGenerationError } from "./types";
+import { VulnerabilityInputSchema, PatchOutputSchema } from "../schemas";
+import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "../types";
+import { PatchGenerationError } from "../types";
 import { z } from "zod";
 
 /**

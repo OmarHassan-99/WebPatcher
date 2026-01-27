@@ -8,7 +8,7 @@ export type {
     PatchOutput,
     ZapFinding,
     ZapInstance
-} from "./schemas";
+} from "../schemas";
 
 /**
  * Configuration options for PatchGenerator
