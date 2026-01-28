@@ -7,6 +7,7 @@ export default function TargetAndRepoURLs({
   updateField,
   error,
   setError,
+  isAnimatePulse,
 }) {
   return (
     <>
@@ -17,10 +18,11 @@ export default function TargetAndRepoURLs({
           value={formData.targetUrl}
           onChange={(e) => {
             updateField("targetUrl", e.target.value);
-            setError("");
+            setError((prev) => ({ ...prev, targetUrl: "" }));
           }}
           placeholder="https://example.com"
-          error={error}
+          error={error.targetUrl}
+          isAnimatePulse={true}
         />
 
         <CustomTargetInput
@@ -29,9 +31,11 @@ export default function TargetAndRepoURLs({
           value={formData.githubRepoUrl}
           onChange={(e) => {
             updateField("githubRepoUrl", e.target.value);
-            setError("");
+            setError((prev) => ({ ...prev, githubRepoUrl: "" }));
           }}
           placeholder="https://github.com/username/repo-name"
+          error={error.githubRepoUrl}
+          isAnimatePulse={isAnimatePulse}
         />
 
         <CustomTargetInput

@@ -1,37 +1,36 @@
 import api from "../../api/axios";
 
-export async function validateTargetURL({ csrfToken, targetURL }) {
+export async function validateTargetAndRepoURLs({
+  csrfToken,
+  targetURL,
+  githubRepoUrl,
+}) {
   try {
     const response = await api.post(
-      "api/scans/validateTargetURL",
-      { targetURL },
-      {
-        headers: { "x-csrf-token": csrfToken },
-      },
+      "api/scans/validateTarget&RepoURLs",
+      { targetURL, githubRepoUrl },
+      { headers: { "x-csrf-token": csrfToken } },
     );
-    const data = response.data;
-    if (!data.success) {
-      throw new Error(
-        data.message ||
-          "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)",
-      );
-    }
-    return data;
+    return response.data;
   } catch (error) {
-    if (error.response) {
-      throw new Error(
-        error.response.data?.message || "Failed to validate target URL",
-      );
+    if (error.response && error.response.data?.errors) {
+      throw { isValidationError: true, errors: error.response.data.errors };
     }
-    throw new Error(error.message);
+    throw new Error(error.response?.data?.message || error.message);
   }
 }
 
-export async function startZapScan({ csrfToken, url, targetName }) {
+export async function startZapScan({
+  csrfToken,
+  url,
+  targetName,
+  githubRepoUrl,
+  context,
+}) {
   try {
     const response = await api.post(
       "/api/scans/startScan",
-      { url, targetName },
+      { url, targetName, githubRepoUrl, context },
       {
         headers: { "x-csrf-token": csrfToken },
       },

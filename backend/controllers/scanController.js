@@ -3,6 +3,7 @@ import Finding from "../models/FindingModel.js";
 //import queue from "../services/queue.js";
 import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
+import { validateRepo } from "../utils/githubValidation.js";
 import { runZapScanService } from "../services/zapService.js";
 import { extractZapReport } from "../services/extractor.js";
 import {
@@ -11,39 +12,46 @@ import {
 } from "../services/patchService.js";
 import mongoose from "mongoose";
 
-export async function validateTargetURL(req, res) {
+export async function validateTargetAndRepoURLs(req, res) {
   try {
-    const { targetURL } = req.body;
+    const { targetURL, githubRepoUrl } = req.body;
+    const errors = {};
+    let installationId = null; // Needed later to clone the code if needed
+
+    // 1. Validate Target URL
     if (!targetURL || !validateUrl(String(targetURL).trim())) {
-      return res.status(400).json({
-        success: false,
-        message:
-          "Invalid URL. Must be a valid public absolute URL (e.g. https://example.com or http://localhost)",
-      });
+      errors.targetUrl =
+        "Invalid URL format (must be absolute, e.g., https://...)";
+    } else {
+      const check = await isHostReachable(targetURL);
+      if (!check.ok) {
+        errors.targetUrl = check.reason || "Target is not reachable";
+      }
     }
 
-    const check = await isHostReachable(targetURL);
-    if (!check.ok) {
-      return res.status(400).json({
-        success: false,
-        message:
-          check.reason ||
-          "Target is not reachable (timeout or connection refused)",
-      });
+    // 2. Validate Repo URL
+    const repoCheck = await validateRepo(githubRepoUrl);
+    if (!repoCheck.valid) {
+      errors.githubRepoUrl = repoCheck.message;
+    } else if (repoCheck.type === "private") {
+      installationId = repoCheck.installationId;
     }
 
-    return res.json({ success: true, valid: true });
+    if (Object.keys(errors).length > 0) {
+      return res.status(400).json({ success: false, errors });
+    }
+
+    return res.json({ success: true, valid: true, installationId });
   } catch (err) {
     console.error(err);
-    return res.status(500).json({
-      success: false,
-      message: err.message || "Failed to validate target URL",
-    });
+    return res
+      .status(500)
+      .json({ success: false, message: "Validation failed" });
   }
 }
 
 export async function startZapScan(req, res) {
-  const { url, targetName } = req.body;
+  const { url, targetName, githubRepoUrl, context } = req.body;
   let scanJobId = null;
 
   try {
