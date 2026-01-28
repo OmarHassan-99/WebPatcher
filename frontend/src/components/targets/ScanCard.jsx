@@ -1,7 +1,18 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { motion as Motion, AnimatePresence } from "framer-motion";
-import { Calendar, GitBranch, Globe, ShieldAlert, Trash2 } from "lucide-react";
+import {
+  Calendar,
+  GitBranch,
+  Globe,
+  ShieldAlert,
+  Trash2,
+  Github,
+  Clock,
+  Database,
+  Code2,
+  Layers,
+} from "lucide-react";
 import { FORMAT_DATE, GET_STATUS_COLOR } from "../../data/constants";
 import { useMutation } from "@tanstack/react-query";
 import { deleteScan } from "../../utils/http/zap";
@@ -19,9 +30,36 @@ const itemVariants = {
   },
 };
 
+function getDuration(start, end) {
+  if (!start || !end) return null;
+  const diff = new Date(end) - new Date(start);
+  const minutes = Math.floor(diff / 60000);
+  const seconds = ((diff % 60000) / 1000).toFixed(0);
+  if (minutes > 60) return `${(minutes / 60).toFixed(1)}h`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
+// eslint-disable-next-line no-unused-vars
+function ContextBadge({ icon: Icon, label }) {
+  if (!label) return null;
+  return (
+    <div className="flex items-center gap-1 px-1.5 py-1 rounded bg-gray-800 border border-gray-700 text-[11px] text-gray-300">
+      <Icon size={15} className="text-primary-100" />
+      <span className="truncate max-w-[80px]">{label}</span>
+    </div>
+  );
+}
+
 export default function ScanCard({ scan }) {
   const csrfToken = useCsrf();
   const [showModal, setShowModal] = useState(false);
+
+  const duration = getDuration(scan.startedAt, scan.finishedAt);
+
+  const primaryDb = scan.context?.db?.[0];
+  const primaryLang = scan.context?.lang?.[0];
+  const primaryFw = scan.context?.fw?.[0];
 
   const { mutate: deleteScanMutate, isPending: isDeleting } = useMutation({
     mutationFn: () => deleteScan({ csrfToken, scanId: scan._id }),
@@ -37,7 +75,6 @@ export default function ScanCard({ scan }) {
   });
 
   function handleDeleteClick(e) {
-    // Stop propagation so the Card Link isn't clicked
     e.preventDefault();
     e.stopPropagation();
     setShowModal(true);
@@ -59,15 +96,33 @@ export default function ScanCard({ scan }) {
           whileHover={{ y: -4 }}
           className="group relative h-full flex flex-col justify-between p-5 rounded-2xl border border-gray-700 bg-gray-900/50 hover:bg-gray-800/50 transition-all"
         >
-          {/* HEADER: Title + Status Badge */}
-          <div className="flex justify-between items-start mb-4 pr-1">
-            <div className="flex-1">
-              <h3 className="text-lg font-bold text-primary-100 group-hover:text-primary-400 transition-colors duration-500 line-clamp-1">
-                {scan.targetName || "Untitled Target"}
-              </h3>
-              <div className="flex items-center gap-1 text-xs text-gray-400 mt-1">
+          {/* HEADER: Title + Status + GitHub */}
+          <div className="flex justify-between items-start mb-3 pr-1">
+            <div className="flex-1 pr-2 overflow-hidden">
+              <div className="flex items-center gap-2 mb-1">
+                <h3
+                  className="text-lg font-bold text-primary-100 group-hover:text-primary-400 transition-colors duration-500 truncate"
+                  title="Target Name"
+                >
+                  {scan.targetName || "Untitled Target"}
+                </h3>
+                {scan.githubRepoUrl && (
+                  <a
+                    href={scan.githubRepoUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-gray-500 hover:text-white transition-colors z-20 ml-1"
+                    title="View Repository"
+                  >
+                    <Github size={18} />
+                  </a>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1 text-xs text-gray-400">
                 <Globe size={12} />
-                <span className="truncate max-w-[180px]">{scan.targetUrl}</span>
+                <span className="truncate">{scan.targetUrl}</span>
               </div>
             </div>
 
@@ -80,11 +135,21 @@ export default function ScanCard({ scan }) {
             </span>
           </div>
 
+          {/* Tech Stack Context Row */}
+          {(primaryDb || primaryLang || primaryFw) && (
+            <div className="flex flex-wrap gap-2 mb-3">
+              <ContextBadge icon={Database} label={primaryDb} />
+              <ContextBadge icon={Code2} label={primaryLang} />
+              <ContextBadge icon={Layers} label={primaryFw} />
+            </div>
+          )}
+
           <div className="h-px w-full bg-gray-700/50 my-2" />
 
-          {/* FOOTER: Stats + Date */}
-          <div className="flex justify-between items-center text-sm text-gray-400 mt-2">
-            <div className="flex gap-3">
+          {/* FOOTER: Stats + Date/Time */}
+          <div className="flex justify-between items-center text-sm text-gray-400 mt-1">
+            <div className="flex gap-3 items-center">
+              {/* Findings Count */}
               <div
                 className="flex items-center gap-1.5"
                 title="Vulnerabilities Found"
@@ -97,23 +162,37 @@ export default function ScanCard({ scan }) {
                       : "text-green-400"
                   }
                 />
-                <span>{scan.findings?.length || 0}</span>
+                <span className="font-mono">{scan.findings?.length || 0}</span>
               </div>
 
+              {/* Branch Name */}
               {scan.context?.branch && (
                 <div className="flex items-center gap-1.5" title="Git Branch">
                   <GitBranch size={14} />
-                  <span>{scan.context.branch}</span>
+                  <span className="max-w-[80px] truncate">
+                    {scan.context.branch}
+                  </span>
                 </div>
               )}
             </div>
 
-            <div
-              className="flex items-center gap-1.5 text-xs text-gray-500 mr-8"
-              title="Scan Date"
-            >
-              <Calendar size={12} />
-              {FORMAT_DATE(scan.createdAt)}
+            <div className="flex flex-col items-end text-xs text-gray-500 mr-8 gap-0.5">
+              {/* Date */}
+              <div className="flex items-center gap-1.5" title="Started At">
+                <Calendar size={12} />
+                {FORMAT_DATE(scan.startedAt || scan.createdAt)}
+              </div>
+
+              {/* Duration (Only if finished) */}
+              {duration && (
+                <div
+                  className="flex items-center gap-1.5 text-gray-600"
+                  title="Scan Duration"
+                >
+                  <Clock size={12} />
+                  {duration}
+                </div>
+              )}
             </div>
           </div>
 

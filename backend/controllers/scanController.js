@@ -59,7 +59,9 @@ export async function startZapScan(req, res) {
     const scan = await ScanJob.create({
       user: req.session.user._id,
       targetUrl: url,
+      githubRepoUrl,
       targetName,
+      context,
     });
     scanJobId = scan._id;
 

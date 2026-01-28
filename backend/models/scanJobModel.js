@@ -1,25 +1,29 @@
 import mongoose from "mongoose";
 const scanJobSchema = new mongoose.Schema(
   {
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
-    },
-    targetUrl: {
-      type: String,
-      required: true,
-    },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+    targetUrl: { type: String, required: true },
+    githubRepoUrl: { type: String, required: true },
     targetName: { type: String },
     context: {
-      languages: [{ type: String }],
-      frameworks: [{ type: String }],
-      repoUrl: { type: String },
+      db: [{ type: String }],
+      lang: [{ type: String }],
+      fw: [{ type: String }],
+      os: [{ type: String }],
+      scm: [{ type: String }],
+      ws: [{ type: String }],
       branch: { type: String, default: "main" },
     },
     status: {
       type: String,
-      enum: ["queued", "running", "completed", "Analyzing", "Patching", "failed"],
+      enum: [
+        "queued",
+        "running",
+        "completed",
+        "Analyzing",
+        "Patching",
+        "failed",
+      ],
       default: "queued",
     },
     findings: [
@@ -36,7 +40,7 @@ const scanJobSchema = new mongoose.Schema(
       type: Date,
     },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 const ScanJob =
