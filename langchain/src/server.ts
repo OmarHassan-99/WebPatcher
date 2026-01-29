@@ -31,7 +31,7 @@ app.get("/health", (req, res) => {
  */
 app.post("/generate-patches", async (req, res) => {
     try {
-        const { findings, minRiskLevel = "Medium" } = req.body;
+        const { findings, minRiskLevel = "Medium", context = null } = req.body;
 
         if (!findings || !Array.isArray(findings) || findings.length === 0) {
             return res.status(400).json({
@@ -62,8 +62,8 @@ app.post("/generate-patches", async (req, res) => {
         console.log(`\nStarting patch generation for ${vulnerabilities.length} vulnerabilities...`);
         console.log(`   Estimated time: ${vulnerabilities.length} - ${vulnerabilities.length * 2} minutes\n`);
 
-        // Generate patches with progress logging
-        const results = await generator.generatePatches(vulnerabilities, (current, total, name) => {
+        // Generate patches with progress logging and user context
+        const results = await generator.generatePatches(vulnerabilities, context, (current, total, name) => {
             console.log(`[LangChain API] Processing ${current}/${total}: ${name}`);
         });
 
@@ -103,7 +103,9 @@ app.post("/generate-patches", async (req, res) => {
                 console.log(`\n[${patchNum}] ${patchData.vulnerability.alert_name}`);
                 console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
                 console.log("-".repeat(60));
-                console.log(`   ANALYSIS:\n   ${patchData.patch.analysis}`);
+                console.log(`   REASONING:\n   ${patchData.patch.reasoning}`);
+                console.log(`\n   VULNERABLE CODE EXAMPLE:\n   ${patchData.patch.vulnerable_code_example}`);
+                console.log(`\n   ANALYSIS:\n   ${patchData.patch.analysis}`);
                 console.log(`\n   ROOT CAUSE:\n   ${patchData.patch.root_cause}`);
                 console.log(`\n   FILE TYPE: ${patchData.patch.file_type}`);
                 console.log(`\n   SUGGESTED FIX:\n   ${patchData.patch.suggested_fix}`);

@@ -22,6 +22,16 @@ export const VulnerabilityInputSchema = z.object({
  * Ensures the response follows a strict JSON format
  */
 export const PatchOutputSchema = z.object({
+    reasoning: z
+        .string()
+        .describe(
+            "Your thought process and reasoning for this analysis, taking into account the provided tech stack context (languages, frameworks, databases, etc.). Explain how the context influences your recommendations."
+        ),
+    vulnerable_code_example: z
+        .string()
+        .describe(
+            "A complete, realistic code example demonstrating the vulnerability in the context of the user's tech stack. Use the exact languages and frameworks specified in the context (e.g., Python/Django, JavaScript/Express, PHP/Laravel). Include comments explaining what makes it vulnerable."
+        ),
     analysis: z
         .string()
         .describe(
@@ -35,7 +45,7 @@ export const PatchOutputSchema = z.object({
     suggested_fix: z
         .string()
         .describe(
-            "Complete code snippet showing the secure implementation to fix the vulnerability"
+            "Complete code snippet showing the secure implementation to fix the vulnerability, using the user's tech stack"
         ),
     file_type: z
         .string()

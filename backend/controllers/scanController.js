@@ -114,7 +114,11 @@ async function generatePatchesInBackground(findings, scanJobId) {
       `[ScanController] Generating patches for ${findings.length} finding(s)...`,
     );
 
-    const patchResult = await generatePatchesForFindings(findings);
+    // Retrieve scan context to pass to LLM
+    const scan = await ScanJob.findById(scanJobId).lean();
+    const context = scan?.context || null;
+
+    const patchResult = await generatePatchesForFindings(findings, "Medium", context);
 
     if (patchResult.success) {
       const successCount = patchResult.patches.filter((p) => p.success).length;
@@ -136,7 +140,11 @@ async function generatePatchesInBackground(findings, scanJobId) {
           console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
           console.log(`   URL: ${patchData.vulnerability.affected_url}`);
           console.log("-".repeat(60));
-          console.log(`    ANALYSIS:`);
+          console.log(`    REASONING:`);
+          console.log(`   ${patchData.patch.reasoning}`);
+          console.log(`\n    VULNERABLE CODE EXAMPLE:`);
+          console.log(`   ${patchData.patch.vulnerable_code_example}`);
+          console.log(`\n    ANALYSIS:`);
           console.log(`   ${patchData.patch.analysis}`);
           console.log(`\n    ROOT CAUSE:`);
           console.log(`   ${patchData.patch.root_cause}`);

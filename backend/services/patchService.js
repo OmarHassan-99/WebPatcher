@@ -1,6 +1,6 @@
 import "dotenv/config.js";
 import axios from "axios";
-
+``
 const LANGCHAIN_API_URL = process.env.LANGCHAIN_API_URL;
 
 /**
@@ -8,11 +8,13 @@ const LANGCHAIN_API_URL = process.env.LANGCHAIN_API_URL;
  *
  * @param {Array} findings - Array of findings from the extractor
  * @param {string} minRiskLevel - Minimum risk level to process ("High", "Medium", "Low")
+ * @param {Object} context - User-provided context (db, lang, fw, os, scm, ws, branch)
  * @returns {Promise<Object>} - Patch generation results
  */
 export async function generatePatchesForFindings(
   findings,
   minRiskLevel = "Medium",
+  context = null,
 ) {
   try {
     console.log(
@@ -24,6 +26,7 @@ export async function generatePatchesForFindings(
       {
         findings,
         minRiskLevel,
+        context,
       },
       {
         timeout: 600000, // 10 minutes timeout
