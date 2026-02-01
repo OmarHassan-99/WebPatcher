@@ -95,7 +95,7 @@ export default function Stepper({
                         setDirection(clicked > currentStep ? 1 : -1);
                         updateStep(clicked);
                         setCompletedSteps((prev) =>
-                          Math.max(prev, currentStep)
+                          Math.max(prev, currentStep),
                         );
                       }
                     }}
@@ -120,10 +120,12 @@ export default function Stepper({
           {stepsArray[currentStep - 1]}
         </StepContentWrapper>
         {!isCompleted && (
-          <div className={`px-8 pb-8 ${footerClassName}`}>
+          <div className={`mx-8 ${footerClassName}`}>
             <div
-              className={`mt-6 sm:mt-0 mb-2.5 flex ${
-                currentStep !== 1 ? "justify-between" : "justify-end"
+              className={`sm:mb-2.5 flex ${
+                currentStep !== 1
+                  ? "justify-between pb-18 sm:pb-0"
+                  : "justify-end mt-6"
               }`}
             >
               {currentStep !== 1 && (
@@ -170,7 +172,7 @@ function StepContentWrapper({
     <Motion.div
       style={{ position: "relative", overflow: "hidden" }}
       animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: "spring", duration: 0.4 }}
+      transition={{ type: "spring", duration: 0.8 }}
       className={`w-full ${className}`}
     >
       <AnimatePresence initial={false} mode="sync" custom={direction}>
@@ -254,8 +256,8 @@ function StepIndicator({
     currentStep === step
       ? "active"
       : currentStep < step
-      ? "inactive"
-      : "complete";
+        ? "inactive"
+        : "complete";
 
   const isLocked = step > completedSteps + 2 || isPending;
 

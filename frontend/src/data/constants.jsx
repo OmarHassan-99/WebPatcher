@@ -176,3 +176,12 @@ export function GET_STATUS_COLOR(status) {
       return "bg-gray-500/10 text-gray-400 border-gray-500/20";
   }
 }
+
+export const STATUS_OPTIONS = [
+  "queued",
+  "running",
+  "completed",
+  "Analyzing",
+  "Patching",
+  "failed",
+];

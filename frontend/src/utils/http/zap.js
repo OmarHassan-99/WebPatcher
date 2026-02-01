@@ -45,14 +45,20 @@ export async function startZapScan({
   }
 }
 
-export async function getScans({ csrfToken }) {
+export async function getScans({ csrfToken, page, size, status }) {
+  const params = { page, size };
+
+  if (status && status !== "all") {
+    params.status = status;
+  }
+
   try {
     const response = await api.get("/api/scans/getScans", {
       headers: { "x-csrf-token": csrfToken },
+      params,
     });
 
-    //return the scans itself only for now
-    return response.data.scans;
+    return response.data;
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Failed to get scans");
@@ -72,6 +78,18 @@ export async function deleteScan({ csrfToken, scanId }) {
       throw new Error(error.response.data?.message || "Failed to delete scan");
     }
     throw new Error(error.message);
+  }
+}
+
+export async function deleteBulkScans({ csrfToken, ids }) {
+  try {
+    const response = await api.delete("/api/scans/bulk-delete", {
+      data: { ids },
+      headers: { "x-csrf-token": csrfToken },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete scans");
   }
 }
 

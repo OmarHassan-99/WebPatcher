@@ -7,6 +7,7 @@ export default function DeleteConfirmationModal({
   onClose,
   onConfirm,
   targetName,
+  deleteBulk,
 }) {
   useEffect(() => {
     if (!isOpen) return;
@@ -49,10 +50,19 @@ export default function DeleteConfirmationModal({
           <div>
             <h3 className="text-xl font-bold text-white">Delete Scan?</h3>
             <p className="text-gray-400 mt-2 text-sm">
-              Are you sure you want to delete the scan for{" "}
-              <span className="text-primary-100 font-semibold">
-                {targetName || "this target"}
-              </span>
+              Are you sure you want to delete{" "}
+              {deleteBulk ? (
+                <span className="text-primary-100 font-semibold">
+                  {deleteBulk}
+                </span>
+              ) : (
+                <>
+                  the scan for{" "}
+                  <span className="text-primary-100 font-semibold">
+                    {targetName || "this target"}
+                  </span>
+                </>
+              )}
               ? This action cannot be undone.
             </p>
           </div>

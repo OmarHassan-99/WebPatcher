@@ -29,12 +29,14 @@ export async function validateTargetAndRepoURLs(req, res) {
       }
     }
 
-    // 2. Validate Repo URL
-    const repoCheck = await validateRepo(githubRepoUrl);
-    if (!repoCheck.valid) {
-      errors.githubRepoUrl = repoCheck.message;
-    } else if (repoCheck.type === "private") {
-      installationId = repoCheck.installationId;
+    // 2. Validate Repo URL (if provided)
+    if (githubRepoUrl && githubRepoUrl.trim() !== "") {
+      const repoCheck = await validateRepo(githubRepoUrl);
+      if (!repoCheck.valid) {
+        errors.githubRepoUrl = repoCheck.message;
+      } else if (repoCheck.type === "private") {
+        installationId = repoCheck.installationId;
+      }
     }
 
     if (Object.keys(errors).length > 0) {
@@ -118,7 +120,11 @@ async function generatePatchesInBackground(findings, scanJobId) {
     const scan = await ScanJob.findById(scanJobId).lean();
     const context = scan?.context || null;
 
-    const patchResult = await generatePatchesForFindings(findings, "Medium", context);
+    const patchResult = await generatePatchesForFindings(
+      findings,
+      "Medium",
+      context,
+    );
 
     if (patchResult.success) {
       const successCount = patchResult.patches.filter((p) => p.success).length;
@@ -188,7 +194,7 @@ async function generatePatchesInBackground(findings, scanJobId) {
 export async function getScans(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const size = Math.min(50, parseInt(req.query.size) || 20);
+    const size = Math.min(50, parseInt(req.query.size) || 6);
     const filter = { user: req.session.user._id };
     if (req.query.status) filter.status = req.query.status;
 
@@ -235,6 +241,31 @@ export async function deleteScan(req, res) {
     return res
       .status(500)
       .json({ success: false, message: "Failed to delete scan" });
+  }
+}
+
+export async function deleteBulkScans(req, res) {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids)) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid Scan IDs format" });
+    }
+
+    const deleted = await ScanJob.deleteMany({
+      user: req.session.user._id,
+      _id: { $in: ids },
+    });
+    return res.json({
+      success: true,
+      message: `${deleted.deletedCount} scans deleted successfully`,
+    });
+  } catch (err) {
+    console.error("deleteBulkScans error:", err);
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to delete scans" });
   }
 }
 

@@ -3,7 +3,7 @@ const scanJobSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     targetUrl: { type: String, required: true },
-    githubRepoUrl: { type: String, required: true },
+    githubRepoUrl: { type: String },
     targetName: { type: String },
     context: {
       db: [{ type: String }],

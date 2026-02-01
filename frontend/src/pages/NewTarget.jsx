@@ -134,7 +134,7 @@ export default function NewTargetPage() {
   }
 
   return (
-    <div className="text-white">
+    <div className="text-white overflow-hidden">
       <Stepper
         stepContainerClassName={`${scanStage !== null ? "hidden" : ""}`}
         onFinalStepCompleted={handleStartScan}
@@ -142,11 +142,7 @@ export default function NewTargetPage() {
         <Step
           stepLabel="Target & Repo URLs"
           onNext={handleUrlsValidation}
-          isNextDisabled={
-            !formData.targetUrl.trim() ||
-            !formData.githubRepoUrl.trim() ||
-            !formData.isChecked
-          }
+          isNextDisabled={!formData.targetUrl.trim() || !formData.isChecked}
           isPending={isPendingValidation}
         >
           <TargetAndRepoURLs

@@ -136,6 +136,7 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
                 ? "Scan is in queue..."
                 : "Analyzing and classifying results…"
             }
+            extraMargin
             noMargin={status === "queued" ? false : true}
           />
         )}
