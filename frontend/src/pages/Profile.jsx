@@ -199,15 +199,15 @@ export default function ProfilePage() {
 
           {/* Avatar */}
           <div className="flex flex-col items-center mt-6">
-            <div className="relative w-32 h-32 rounded-full overflow-hidden shadow-lg">
+            <div className="relative size-32 rounded-full overflow-hidden shadow-lg">
               {user.githubUsername ? (
                 <img
                   src={`https://avatars.githubusercontent.com/${user.githubUsername}`}
                   alt="GitHub Avatar"
-                  className="w-full h-full object-cover"
+                  className="size-full object-cover"
                 />
               ) : (
-                <div className="w-full h-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white">
+                <div className="size-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white">
                   {formData.name.charAt(0).toUpperCase()}
                 </div>
               )}

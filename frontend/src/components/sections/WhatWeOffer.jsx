@@ -27,12 +27,12 @@ export default function WhatWeOffer() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ amount: 0.4, once: true }}
               whileHover={{
-                scale: 1.01,
+                scale: 1.02,
                 rotate: 1,
               }}
               transition={{ type: "spring", stiffness: 50 }}
               key={i}
-              className="flex flex-col items-center p-6 bg-primary-700 shadow-lg rounded-2xl hover:shadow-xl hover:bg-primary-600"
+              className="flex flex-col items-center p-8 glass-card rounded-3xl"
             >
               <Lottie
                 className="h-44"

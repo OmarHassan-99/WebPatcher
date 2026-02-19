@@ -13,7 +13,7 @@ export default function RootPage() {
 
   return (
     <div className="flex flex-col min-h-screen w-full">
-      <div className="fixed top-0 w-full h-full -z-10 bg-primary-900">
+      <div className="fixed top-0 size-full -z-10 bg-primary-900">
         <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
       </div>
 

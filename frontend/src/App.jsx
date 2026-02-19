@@ -66,6 +66,7 @@ function App() {
       <RouterProvider router={router} />
       <Toaster
         toastOptions={{
+          position: "top-right",
           style: {
             background: "#2E1A47",
             color: "#fff",

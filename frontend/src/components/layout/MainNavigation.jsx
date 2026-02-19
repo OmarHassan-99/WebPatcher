@@ -34,27 +34,27 @@ export default function MainNavigation() {
 
   return (
     <Motion.nav
-      initial={{ opacity: 0, y: -200 }}
+      initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ type: "spring" }}
-      className="sticky top-4 z-50 text-primary-100 flex items-center justify-between bg-transparent border border-gray-700 backdrop-blur-sm rounded-full px-6 py-3 mx-4 sm:mx-12 lg:mx-32 shadow-lg"
+      transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      className="sticky top-4 z-50 flex items-center justify-between glass-panel rounded-full px-6 py-3 mx-4 sm:mx-auto sm:max-w-4xl shadow-2xl shadow-primary-900/20"
     >
       {/* Logo / App Name */}
-      <Link to="/" className="flex gap-2 font-bold text-lg">
+      <Link to="/">
         <Motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           whileHover={{ scale: 1.05 }}
           transition={{ type: "spring" }}
-          className="flex items-center gap-2"
+          className="flex items-center gap-2 mr-5"
         >
-          <img src="/logo.svg" alt="WebPatcher Logo" className="w-8 h-8" />
-          <p className="text-white">WebPatcher</p>
+          <img src="/logo.svg" alt="WebPatcher Logo" className="size-8" />
+          <p className="text-white font-bold text-lg">WebPatcher</p>
         </Motion.div>
       </Link>
 
       {/* Desktop links */}
-      <div className="hidden sm:flex gap-6 font-semibold">
+      <div className="hidden sm:flex font-semibold">
         {!isAuthenticated ? (
           <>
             <CustomLink to="/auth?mode=login" mode="login" title="Login" />
@@ -108,7 +108,7 @@ export default function MainNavigation() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ duration: 0.3 }}
-            className="absolute top-13 left-0 right-0 mx-4 rounded-xl border border-gray-700 bg-gray-900 p-6 sm:hidden"
+            className="absolute top-13 left-0 right-0 mx-4 mt-2 rounded-xl border border-gray-700 bg-gray-900 p-6 sm:hidden"
           >
             <div className="flex flex-col gap-4 font-semibold">
               {!isAuthenticated ? (

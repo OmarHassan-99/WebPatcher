@@ -135,6 +135,12 @@ export const FADE_VARIANTS = {
   exit: { opacity: 0, y: -20, transition: { duration: 0.3 } },
 };
 
+export const CHECKBOX_VARIANTS = {
+  initial: { scale: 0.5, opacity: 0 },
+  animate: { scale: 1, opacity: 1 },
+  exit: { scale: 0.5, opacity: 0 },
+};
+
 export const SEVERITY_FILTER = [
   "All",
   "High",
@@ -162,12 +168,26 @@ export function FORMAT_DATE(dateString) {
   });
 }
 
+export function GET_DURATION(start, end) {
+  if (!start || !end) return null;
+  const diff = new Date(end) - new Date(start);
+  const minutes = Math.floor(diff / 60000);
+  const seconds = ((diff % 60000) / 1000).toFixed(0);
+  if (minutes > 60) return `${(minutes / 60).toFixed(1)}h`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+  return `${seconds}s`;
+}
+
 export function GET_STATUS_COLOR(status) {
   switch (status?.toLowerCase()) {
     case "queued":
       return "bg-yellow-500/10 text-yellow-400 border-yellow-500/20";
     case "running":
       return "bg-blue-500/10 text-blue-400 border-blue-500/20";
+    case "analyzing":
+      return "bg-indigo-500/10 text-indigo-400 border-indigo-500/20";
+    case "patching":
+      return "bg-orange-500/10 text-orange-400 border-orange-500/20";
     case "completed":
       return "bg-green-500/10 text-green-400 border-green-500/20";
     case "failed":
@@ -180,8 +200,8 @@ export function GET_STATUS_COLOR(status) {
 export const STATUS_OPTIONS = [
   "queued",
   "running",
+  "analyzing",
+  "patching",
   "completed",
-  "Analyzing",
-  "Patching",
   "failed",
 ];

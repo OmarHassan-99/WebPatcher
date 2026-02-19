@@ -23,7 +23,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="text-white hover:text-primary-100 transition"
           >
-            <Github className="w-5 h-5" />
+            <Github className="size-5" />
           </a>
           <a
             href="https://linkedin.com/in/abdullah-mohamed-1q1q"
@@ -31,7 +31,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="text-white hover:text-primary-100 transition"
           >
-            <Linkedin className="w-5 h-5" />
+            <Linkedin className="size-5" />
           </a>
           <a
             href="https://facebook.com"
@@ -39,7 +39,7 @@ export default function Footer() {
             rel="noopener noreferrer"
             className="text-white hover:text-primary-100 transition"
           >
-            <Facebook className="w-5 h-5" />
+            <Facebook className="size-5" />
           </a>
         </div>
       </div>

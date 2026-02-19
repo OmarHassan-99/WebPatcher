@@ -1,5 +1,5 @@
 import CheckField from "./CheckField";
-import LockButton from "../../../../react-bits/LockButton";
+import LockButton from "../../../react-bits/LockButton";
 import CustomTargetInput from "./CustomTargetInput";
 
 export default function TargetAndRepoURLs({

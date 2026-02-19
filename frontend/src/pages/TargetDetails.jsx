@@ -1,56 +1,17 @@
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import Lottie from "lottie-react";
+import { AlertTriangle, ArrowLeft } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import useCsrf from "../hooks/useCsrf";
-
+import { getFindings } from "../utils/http/zap";
+import { FADE_VARIANTS } from "../data/constants";
 import loadingLottieAnimation from "../lottie/Loading - Animation.json";
 import SuccessLottieAnimation from "../lottie/Success.json";
 import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
-
-import VulnerabilityDashboard from "../components/targets/VulnerabilityDashboard";
-import { getFindings } from "../utils/http/zap";
-import { FADE_VARIANTS } from "../data/constants";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
-
-function StageView({
-  animation,
-  text,
-  subtext,
-  failed,
-  loop = true,
-  noPulse,
-  extraMargin,
-  noMargin,
-}) {
-  return (
-    <Motion.div
-      variants={FADE_VARIANTS}
-      initial="hidden"
-      animate="visible"
-      exit="exit"
-      className={`flex flex-col items-center ${extraMargin && "mt-8"}`}
-    >
-      <Lottie animationData={animation} className="h-56" loop={loop} autoplay />
-      <p
-        className={`text-xl ${noMargin ? "" : "mt-4"} font-semibold ${noPulse ? "" : "animate-pulse"} text-primary-100 text-center`}
-      >
-        {text}
-      </p>
-      {subtext && <p className="text-gray-400 mt-2 text-sm">{subtext}</p>}
-      {failed && (
-        <Link
-          to="/targets"
-          className="mt-4 px-6 py-2 bg-gray-800 hover:bg-gray-700 rounded-full transition flex items-center gap-2 font-medium"
-        >
-          <ArrowLeft size={18} />
-          Back to Targets
-        </Link>
-      )}
-    </Motion.div>
-  );
-}
+import VulnerabilityDashboard from "../components/targetDetails/VulnerabilityDashboard";
+import StageView from "../components/targetDetails/StageView";
 
 export default function TargetDetailsPage({ scanStage, scanResult }) {
   const { targetId } = useParams();
@@ -68,7 +29,7 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
     },
   });
 
-  const status = data?.status; // "queued", "running", "completed", "failed"
+  const status = data?.status; // "queued", "running", "analyzing", "patching", "completed", "failed"
   const findings = data?.findings || scanResult || [];
 
   return (
@@ -102,7 +63,7 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
             className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-4"
           >
             <div className="p-4 bg-red-500/10 rounded-full">
-              <AlertTriangle className="w-16 h-16 text-red-500" />
+              <AlertTriangle className="size-16 text-red-500" />
             </div>
             <h2 className="text-3xl font-bold">Target Not Found</h2>
             <p className="text-gray-400 max-w-md">
