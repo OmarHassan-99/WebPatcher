@@ -5,34 +5,29 @@ import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "../t
 import { PatchGenerationError } from "../types";
 import { z } from "zod";
 
-/**
- * PatchGenerator - AI-powered vulnerability patch recommendation engine
- * Uses LangChain with Ollama to analyze security vulnerabilities from OWASP ZAP
- * and generate structured code patches.
- */
+
 export class PatchGenerator {
     private llm: ChatOllama;
     private promptTemplate: ChatPromptTemplate;
 
     constructor(config?: PatchGeneratorConfig) {
-        // Default configuration - no .env needed
         const baseUrl = config?.baseUrl ?? "http://127.0.0.1:11434";
         const model = config?.model ?? "mistral";
         const temperature = config?.temperature ?? 0.3;
 
-        // Initialize ChatOllama with configuration
+
         this.llm = new ChatOllama({
             baseUrl,
             model,
             temperature,
-            format: "json", // Enable JSON mode for structured output
+            format: "json",
         });
 
-        // Create the prompt template instructing the LLM to act as a Senior Secure Coding Engineer
+
         this.promptTemplate = ChatPromptTemplate.fromMessages([
             [
                 "system",
-                `You are a Senior Secure Coding Engineer with 15+ years of experience in application security.
+                `You are a Senior Secure Coding Engineer with years of experience in application security.
 Your expertise includes:
 - Identifying and remediating OWASP Top 10 vulnerabilities
 - Secure code review and penetration testing
@@ -78,26 +73,19 @@ Your response MUST include:
         ]);
     }
 
-    /**
-     * Generate a security patch for a given vulnerability
-     * 
-     * @param vulnerability - Vulnerability details from the Extractor service
-     * @param context - User-provided context (db, lang, fw, os, scm, ws, branch)
-     * @returns Structured patch output with analysis, root cause, suggested fix, and file type
-     * @throws PatchGenerationError if the LLM fails to generate valid output
-     */
+
     async generatePatch(vulnerability: VulnerabilityInput, context?: any): Promise<PatchOutput> {
-        // Validate input against schema
+
         const validatedInput = VulnerabilityInputSchema.parse(vulnerability);
 
-        // Build optional sections for the prompt
+
         const evidenceSection = validatedInput.evidence
             ? `**Evidence:** ${validatedInput.evidence}`
             : "";
 
         const additionalParts: string[] = [];
 
-        // Add tech stack context if provided
+
         if (context) {
             const techStackParts: string[] = [];
             if (context.db?.length > 0) techStackParts.push(`- Database: ${context.db.join(", ")}`);
@@ -124,12 +112,12 @@ Your response MUST include:
             : "";
 
         try {
-            // Create the structured output chain using withStructuredOutput
+
             const structuredLlm = this.llm.withStructuredOutput(PatchOutputSchema, {
                 name: "patch_recommendation",
             });
 
-            // Format the prompt with vulnerability details
+
             const formattedPrompt = await this.promptTemplate.formatMessages({
                 alert_name: validatedInput.alert_name,
                 risk_level: validatedInput.risk_level,
@@ -139,10 +127,10 @@ Your response MUST include:
                 additional_context: additionalContext,
             });
 
-            // Invoke the structured LLM chain
+
             const result = await structuredLlm.invoke(formattedPrompt);
 
-            // Ensure all required fields exist (handle missing fields from LLM)
+
             const processedResult = {
                 reasoning: result.reasoning || "Analysis based on the vulnerability description and available evidence.",
                 vulnerable_code_example: result.vulnerable_code_example || "// Unable to generate specific vulnerable code example\n// Please review the analysis and suggested fix for remediation guidance",
@@ -152,11 +140,11 @@ Your response MUST include:
                 file_type: result.file_type || "unknown"
             };
 
-            // Validate the processed output matches our schema
+
             return PatchOutputSchema.parse(processedResult);
 
         } catch (error) {
-            // Handle Zod validation errors (Zod v4 uses .issues)
+
             if (error instanceof z.ZodError) {
                 const issues = error.issues as Array<{ message: string }>;
                 throw new PatchGenerationError(
@@ -165,7 +153,7 @@ Your response MUST include:
                 );
             }
 
-            // Handle other errors
+
             if (error instanceof Error) {
                 throw new PatchGenerationError(
                     `Failed to generate patch: ${error.message}`,
@@ -177,15 +165,7 @@ Your response MUST include:
         }
     }
 
-    /**
-     * Generate patches for multiple vulnerabilities
-     * Processes sequentially to avoid overwhelming the LLM
-     * 
-     * @param vulnerabilities - Array of vulnerability details
-     * @param context - User-provided context (db, lang, fw, os, scm, ws, branch)
-     * @param onProgress - Optional callback for progress updates
-     * @returns Array of patch outputs (or errors for failed generations)
-     */
+
     async generatePatches(
         vulnerabilities: VulnerabilityInput[],
         context?: any,
@@ -196,7 +176,7 @@ Your response MUST include:
         for (let i = 0; i < vulnerabilities.length; i++) {
             const vuln = vulnerabilities[i];
 
-            // Call progress callback if provided
+
             if (onProgress) {
                 onProgress(i + 1, vulnerabilities.length, vuln.alert_name);
             }

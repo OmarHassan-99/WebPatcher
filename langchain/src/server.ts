@@ -8,27 +8,20 @@ import type { ZapFinding } from "./types";
 const app = express();
 const PORT = 3001;
 
-// Middleware
+
 app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 
-// Initialize PatchGenerator once
+
 const generator = new PatchGenerator();
 logger.info("PatchGenerator initialized");
 
-/**
- * Health check endpoint
- */
+
 app.get("/health", (req, res) => {
     res.json({ status: "ok", service: "langchain-patch-generator" });
 });
 
-/**
- * Generate patches for ZAP findings
- * 
- * POST /generate-patches
- * Body: { findings: ZapFinding[], minRiskLevel?: "High" | "Medium" | "Low" }
- */
+
 app.post("/generate-patches", async (req, res) => {
     try {
         const { findings, minRiskLevel = "Medium", context = null } = req.body;
@@ -42,7 +35,7 @@ app.post("/generate-patches", async (req, res) => {
 
         logger.info(`[LangChain API] Received ${findings.length} finding(s)`);
 
-        // Convert ZAP findings to VulnerabilityInput format
+
         const vulnerabilities = ZapFindingAdapter.convertAndFilter(
             findings as ZapFinding[],
             minRiskLevel as "High" | "Medium" | "Low"
@@ -58,16 +51,16 @@ app.post("/generate-patches", async (req, res) => {
             });
         }
 
-        // Log start of processing
+
         console.log(`\nStarting patch generation for ${vulnerabilities.length} vulnerabilities...`);
         console.log(`   Estimated time: ${vulnerabilities.length} - ${vulnerabilities.length * 2} minutes\n`);
 
-        // Generate patches with progress logging and user context
+
         const results = await generator.generatePatches(vulnerabilities, context, (current, total, name) => {
             console.log(`[LangChain API] Processing ${current}/${total}: ${name}`);
         });
 
-        // Combine with original finding info
+
         const patches = results.map((result, index) => {
             const vulnerability = vulnerabilities[index];
 
@@ -79,7 +72,7 @@ app.post("/generate-patches", async (req, res) => {
                 };
             }
 
-            // TypeScript now knows this is the error branch
+
             const errorResult = result as { success: false; error: string };
             return {
                 vulnerability,
@@ -91,7 +84,7 @@ app.post("/generate-patches", async (req, res) => {
         const successCount = patches.filter(p => p.success).length;
         logger.info(`[LangChain API] Generated ${successCount} patches successfully`);
 
-        // Display all patches in terminal
+
         console.log("\n" + "=".repeat(80));
         console.log("AI-GENERATED PATCHES (LangChain Server)");
         console.log("=".repeat(80));
@@ -136,12 +129,7 @@ app.post("/generate-patches", async (req, res) => {
     }
 });
 
-/**
- * Generate patch for a single finding
- * 
- * POST /generate-patch
- * Body: ZapFinding
- */
+
 app.post("/generate-patch", async (req, res) => {
     try {
         const finding = req.body;
@@ -155,10 +143,10 @@ app.post("/generate-patch", async (req, res) => {
 
         logger.info(`[LangChain API] Processing single finding: ${finding.alertName}`);
 
-        // Convert ZAP finding to VulnerabilityInput format
+
         const vulnerability = ZapFindingAdapter.convert(finding as ZapFinding);
 
-        // Generate patch
+
         const patch = await generator.generatePatch(vulnerability);
 
         logger.info(`[LangChain API] Patch generated for: ${finding.alertName}`);
@@ -178,7 +166,7 @@ app.post("/generate-patch", async (req, res) => {
     }
 });
 
-// Start server
+
 app.listen(PORT, () => {
     logger.info(`[LangChain API] Server running on http://localhost:${PORT}`);
     console.log(`\nLangChain Patch Generator API`);

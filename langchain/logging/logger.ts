@@ -22,7 +22,7 @@ class Logger {
 
     this.logs.push(entry);
 
-    // Also log to console
+
     const prefix = `[${entry.level}] ${entry.timestamp}`;
     if (data) {
       console.log(`${prefix} ${message}`, data);

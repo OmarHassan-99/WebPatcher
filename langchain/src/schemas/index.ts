@@ -1,9 +1,6 @@
 import { z } from "zod";
 
-/**
- * Schema for vulnerability input from the Extractor service
- * Contains details parsed from OWASP ZAP reports
- */
+
 export const VulnerabilityInputSchema = z.object({
     alert_name: z.string().describe("Name of the vulnerability alert"),
     description: z.string().describe("Detailed description of the vulnerability"),
@@ -17,10 +14,7 @@ export const VulnerabilityInputSchema = z.object({
     solution: z.string().optional().describe("ZAP's suggested solution"),
 });
 
-/**
- * Schema for structured LLM output
- * Ensures the response follows a strict JSON format
- */
+
 export const PatchOutputSchema = z.object({
     reasoning: z
         .string()
@@ -54,10 +48,7 @@ export const PatchOutputSchema = z.object({
         ),
 });
 
-/**
- * Schema for ZAP Finding instances (from the extractor service)
- * This matches the output of backend/services/extractor.js
- */
+
 export const ZapInstanceSchema = z.object({
     uri: z.string().optional().default(""),
     method: z.string().optional().default(""),
@@ -66,34 +57,28 @@ export const ZapInstanceSchema = z.object({
     evidence: z.string().optional().default(""),
 });
 
-/**
- * Schema for ZAP Finding (from the extractor service)
- * This matches the output of backend/services/extractor.js after MongoDB storage
- * 
- * Note: instances can be an array (from MongoDB) or a single object
- * Note: cweId can be a string (from MongoDB) or number
- */
+
 export const ZapFindingSchema = z.object({
-    _id: z.any().optional(), // MongoDB ObjectId
-    scanJob: z.any().optional(), // MongoDB ObjectId or string
+    _id: z.any().optional(),
+    scanJob: z.any().optional(),
     pluginId: z.string().optional(),
     alertName: z.string(),
-    severity: z.string(), // "High", "Medium", "Low", "Informational"
+    severity: z.string(),
     description: z.string(),
     solution: z.string().optional(),
-    // instances can be array (from MongoDB) or single object
+
     instances: z.union([
         z.array(ZapInstanceSchema),
         ZapInstanceSchema,
     ]),
-    // cweId can be string or number or null
+
     cweId: z.union([z.string(), z.number(), z.null()]).optional(),
     createdAt: z.any().optional(),
     updatedAt: z.any().optional(),
     __v: z.any().optional(),
 });
 
-// Export schema types for external use
+
 export type VulnerabilityInput = z.infer<typeof VulnerabilityInputSchema>;
 export type PatchOutput = z.infer<typeof PatchOutputSchema>;
 export type ZapFinding = z.infer<typeof ZapFindingSchema>;
