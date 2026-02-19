@@ -19,7 +19,7 @@ export default function FormikForm({
         validateOnChange={false}
       >
         {({ isSubmitting }) => (
-          <Form className="space-y-6">
+          <Form>
             {content}
             <button
               type="submit"
@@ -35,8 +35,8 @@ export default function FormikForm({
                   ? "Registering..."
                   : "Logging in..."
                 : mode === "register"
-                ? "Register"
-                : "Login"}
+                  ? "Register"
+                  : "Login"}
             </button>
           </Form>
         )}

@@ -6,8 +6,8 @@ import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
 import { queryClient } from "../utils/http/userAuth";
 import useCsrf from "../hooks/useCsrf";
 
-import TargetAndRepoURLs from "../components/targets/newTarget/steps/Target&RepoURLs";
-import AiContext from "../components/targets/newTarget/steps/AiContext";
+import TargetAndRepoURLs from "../components/targets/newTarget/Target&RepoURLs";
+import AiContext from "../components/targets/newTarget/AiContext";
 import TargetDetailsPage from "./TargetDetails";
 
 const GITHUB_INSTALL_URL =

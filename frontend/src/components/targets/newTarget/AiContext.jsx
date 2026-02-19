@@ -7,14 +7,14 @@ import {
   OPERATING_SYSTEMS,
   SCMs,
   WEB_SERVERS,
-} from "../../../../data/constants";
+} from "../../../data/constants";
 import ContextContainer from "./ContextContainer";
 
 export default function AIContext({ formData, updateAiContext }) {
   const [selectedDB, setSelectedDB] = useState(formData.context.db);
   const [selectedLangs, setSelectedLangs] = useState(formData.context.lang);
   const [selectedFrameworks, setSelectedFrameworks] = useState(
-    formData.context.fw
+    formData.context.fw,
   );
   const [selectedOS, setSelectedOS] = useState(formData.context.os);
   const [selectedSCM, setSelectedSCM] = useState(formData.context.scm);
@@ -26,26 +26,26 @@ export default function AIContext({ formData, updateAiContext }) {
       type === "db"
         ? setSelectedDB
         : type === "lang"
-        ? setSelectedLangs
-        : type === "fw"
-        ? setSelectedFrameworks
-        : type === "os"
-        ? setSelectedOS
-        : type === "scm"
-        ? setSelectedSCM
-        : setSelectedWS;
+          ? setSelectedLangs
+          : type === "fw"
+            ? setSelectedFrameworks
+            : type === "os"
+              ? setSelectedOS
+              : type === "scm"
+                ? setSelectedSCM
+                : setSelectedWS;
     const current =
       type === "db"
         ? selectedDB
         : type === "lang"
-        ? selectedLangs
-        : type === "fw"
-        ? selectedFrameworks
-        : type === "os"
-        ? selectedOS
-        : type === "scm"
-        ? selectedSCM
-        : selectedWS;
+          ? selectedLangs
+          : type === "fw"
+            ? selectedFrameworks
+            : type === "os"
+              ? selectedOS
+              : type === "scm"
+                ? selectedSCM
+                : selectedWS;
 
     if (current.includes(value)) {
       setFn(current.filter((item) => item !== value));

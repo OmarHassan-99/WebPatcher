@@ -44,7 +44,7 @@ export default function DeleteConfirmationModal({
 
         <div className="flex flex-col items-center text-center space-y-4">
           <div className="p-3 bg-red-500/10 rounded-full">
-            <AlertTriangle className="w-10 h-10 text-red-500" />
+            <AlertTriangle className="size-10 text-red-500" />
           </div>
 
           <div>
