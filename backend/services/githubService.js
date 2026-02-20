@@ -6,8 +6,6 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-
-// --- 🌳 فنكشن الشجرة (حطها هنا برا الكلاس) ---
 export const generateFileTree = (dirPath, prefix = '') => {
     let tree = '';
     const files = fs.readdirSync(dirPath);
