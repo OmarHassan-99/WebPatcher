@@ -11,6 +11,7 @@ import {
   isLangChainApiHealthy,
 } from "../services/patchService.js";
 import mongoose from "mongoose";
+import { createAndSaveRecommendation } from "../services/recommendationService.js";
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -159,11 +160,15 @@ async function generatePatchesInBackground(findings, scanJobId) {
           console.log(`   ${patchData.patch.suggested_fix}`);
           console.log("-".repeat(60));
 
-          // Database saving disabled for now
-          // await Finding.findOneAndUpdate(
-          //   { scanJob: scanJobId, alertName: patchData.vulnerability.alert_name },
-          //   { $set: { patch: patchData.patch, patchGeneratedAt: new Date() } }
-          // );
+          try {
+            await createAndSaveRecommendation(
+              scanJobId,
+              patchData.vulnerability,
+              patchData.patch
+            );
+          } catch (dbErr) {
+            console.error(`   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`);
+          }
         } else if (!patchData.success) {
           console.log(
             `\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`,

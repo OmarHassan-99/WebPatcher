@@ -9,6 +9,7 @@ import { resetStalledScans } from "./services/cleanupService.js";
 
 import userRouter from "./routes/userRoute.js";
 import scanRouter from "./routes/scanRoutes.js";
+import recommendationRouter from "./routes/recommendationRoutes.js";
 
 import "dotenv/config.js";
 
@@ -63,6 +64,7 @@ app.get("/api/csrf-token", (req, res) => {
 
 app.use("/auth", userRouter);
 app.use("/api/scans", scanRouter);
+app.use("/api/recommendations", recommendationRouter);
 app.use(doubleCsrfProtection);
 
 app.use((err, req, res, next) => {
