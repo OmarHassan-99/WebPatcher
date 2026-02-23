@@ -1,4 +1,4 @@
-import Recommendation from "../models/RecommendationModel.js";
+import ScanRecommendation from "../models/ScanRecommendationModel.js";
 
 /**
  * Validates the required six fields from LLM output
@@ -6,87 +6,85 @@ import Recommendation from "../models/RecommendationModel.js";
  * @returns {Object} { valid: boolean, errors: array }
  */
 export function validateLLMOutput(llmPatch) {
-    const fields = [
-        "reasoning",
-        "vulnerable_code_example",
-        "analysis",
-        "root_cause",
-        "suggested_fix",
-        "file_type"
-    ];
+  const fields = [
+    "reasoning",
+    "vulnerable_code_example",
+    "analysis",
+    "root_cause",
+    "suggested_fix",
+    "file_type",
+  ];
 
-    const errors = [];
-    if (!llmPatch) {
-        return { valid: false, errors: ["LLM Patch is missing"] };
+  const errors = [];
+  if (!llmPatch) {
+    return { valid: false, errors: ["LLM Patch is missing"] };
+  }
+
+  for (const field of fields) {
+    if (!llmPatch[field] || typeof llmPatch[field] !== "string") {
+      errors.push(`Missing or invalid field: ${field}`);
     }
+  }
 
-    for (const field of fields) {
-        if (!llmPatch[field] || typeof llmPatch[field] !== "string") {
-            errors.push(`Missing or invalid field: ${field}`);
-        }
-    }
-
-    return { valid: errors.length === 0, errors };
+  return { valid: errors.length === 0, errors };
 }
 
 /**
- * Maps LLM output and vulnerability data into the Recommendation model
- * and saves it in the database.
+ * Maps LLM output and vulnerability data into the ScanRecommendation embedded
+ * document and pushes it into the scan's recommendations array.
+ * Creates the ScanRecommendation document if it doesn't exist yet.
  * @param {string} scanId - The ID of the scan this recommendation belongs to
  * @param {Object} vulnerabilityData - General info about the vulnerability
  * @param {Object} llmPatch - The validated LLM patch fields
- * @returns {Promise<Object>} The saved Recommendation document
+ * @returns {Promise<Object>} The saved recommendation sub-document
  */
-export async function createAndSaveRecommendation(scanId, vulnerabilityData, llmPatch) {
-    const validation = validateLLMOutput(llmPatch);
+export async function createAndSaveRecommendation(
+  scanId,
+  vulnerabilityData,
+  llmPatch,
+) {
+  const validation = validateLLMOutput(llmPatch);
 
-    if (!validation.valid) {
-        throw new Error(`Invalid LLM Output: ${validation.errors.join(", ")}`);
-    }
+  if (!validation.valid) {
+    throw new Error(`Invalid LLM Output: ${validation.errors.join(", ")}`);
+  }
 
-    const recommendation = new Recommendation({
-        scanId,
-        alert_name: vulnerabilityData.alert_name,
-        risk_level: vulnerabilityData.risk_level,
-        affected_url: vulnerabilityData.affected_url,
-        description: vulnerabilityData.description || "",
+  const newRecommendation = {
+    alert_name: vulnerabilityData.alert_name,
+    risk_level: vulnerabilityData.risk_level,
+    affected_url: vulnerabilityData.affected_url,
+    description: vulnerabilityData.description || "",
 
-        // LLM Map
-        reasoning: llmPatch.reasoning,
-        vulnerable_code_example: llmPatch.vulnerable_code_example,
-        analysis: llmPatch.analysis,
-        root_cause: llmPatch.root_cause,
-        suggested_fix: llmPatch.suggested_fix,
-        file_type: llmPatch.file_type
-    });
+    // LLM Map
+    reasoning: llmPatch.reasoning,
+    vulnerable_code_example: llmPatch.vulnerable_code_example,
+    analysis: llmPatch.analysis,
+    root_cause: llmPatch.root_cause,
+    suggested_fix: llmPatch.suggested_fix,
+    file_type: llmPatch.file_type,
+  };
 
-    return await recommendation.save();
+  // Upsert: create the document if it doesn't exist, push the recommendation
+  const updated = await ScanRecommendation.findOneAndUpdate(
+    { scanJob: scanId },
+    { $push: { recommendations: newRecommendation } },
+    { new: true, upsert: true },
+  );
+
+  // Return the last pushed recommendation
+  return updated.recommendations[updated.recommendations.length - 1];
 }
 
 /**
  * Get all recommendations for a specific scan ID
  * Returns a standardized DTO-friendly format for the frontend
- * @param {string} scanId 
+ * @param {string} scanId
  * @returns {Promise<Array>} Array of recommendation objects
  */
 export async function getRecommendationsForScan(scanId) {
-    const recommendations = await Recommendation.find({ scanId })
-        .sort({ createdAt: -1 })
-        .select("-__v") // exclude mongoose version key
-        .lean();
+  const scanRec = await ScanRecommendation.findOne({ scanJob: scanId })
+    .select("-__v")
+    .lean();
 
-    return recommendations;
-}
-
-/**
- * Get a specific recommendation by its ID
- * @param {string} recommendationId 
- * @returns {Promise<Object>} recommendation object
- */
-export async function getRecommendationById(recommendationId) {
-    const recommendation = await Recommendation.findById(recommendationId)
-        .select("-__v")
-        .lean();
-
-    return recommendation;
+  return scanRec?.recommendations ?? [];
 }

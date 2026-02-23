@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+
 const scanJobSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
@@ -26,12 +27,7 @@ const scanJobSchema = new mongoose.Schema(
       ],
       default: "queued",
     },
-    findings: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Finding",
-      },
-    ],
+    findingsCount: { type: Number, default: 0 },
     startedAt: {
       type: Date,
       default: Date.now,

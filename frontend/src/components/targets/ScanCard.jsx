@@ -151,7 +151,7 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
 
           {/* CARD HEADER (Frosted) */}
           <div className="relative p-6 pb-4 border-b border-white/5 bg-white/5 backdrop-blur-sm">
-            <div className="flex justify-between items-start mb-2 pl-8">
+            <div className="flex justify-between mb-2 pl-8">
               <div className="flex-1 pr-2 overflow-hidden">
                 <div className="flex items-center gap-x-3">
                   <h3
@@ -188,7 +188,7 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
                 </div>
               </div>
 
-              <div className="flex flex-col items-end gap-y-2">
+              <div className="flex flex-col justify-end">
                 <div
                   className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg
                     ${GET_STATUS_COLOR(scan.status)}
@@ -202,9 +202,6 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
                   `}
                 >
                   {scan.status}
-                </div>
-                <div className="text-xs text-wrap w-20 text-gray-500">
-                  {createdDate}
                 </div>
               </div>
             </div>
@@ -236,14 +233,14 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
               <div className="flex items-center gap-4">
                 <div
                   className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-                    scan.findings?.length > 0
+                    scan.findingsCount > 0
                       ? "bg-red-500/10 border-red-500/20 text-red-200"
                       : "bg-emerald-500/10 border-emerald-500/20 text-emerald-200"
                   }`}
                 >
                   <ShieldAlert size={14} />
                   <span className="font-bold text-sm">
-                    {scan.findings?.length || 0}
+                    {scan.findingsCount || 0}
                   </span>
                 </div>
 
@@ -257,13 +254,18 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
                 )}
               </div>
 
-              <div className="text-right">
-                <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-0.5">
-                  Duration
-                </p>
-                <div className="flex items-center justify-end gap-1.5 text-xs text-gray-300 font-medium">
-                  <Clock size={12} className="text-primary-500" />
-                  {duration || "--"}
+              <div className="flex items-center gap-x-5 justify-end flex-1">
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-widest font-semibold mb-0.5">
+                    Duration
+                  </p>
+                  <div className="flex items-center justify-end gap-1.5 text-xs text-gray-300 font-medium">
+                    <Clock size={12} className="text-primary-500" />
+                    {duration || "--"}
+                  </div>
+                </div>
+                <div className="text-xs text-wrap w-20 text-gray-500">
+                  {createdDate}
                 </div>
               </div>
             </div>
@@ -274,7 +276,7 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
             <button
               onClick={handleDeleteClick}
               disabled={isDeleting}
-              className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all duration-300 z-50 backdrop-blur-md"
+              className="absolute top-4 right-4 p-2 rounded-xl text-gray-400 opacity-0 group-hover:opacity-100 hover:bg-red-500/20 hover:text-red-400 transition-all duration-300 z-50 backdrop-blur-md cursor-pointer"
               title="Delete Scan"
             >
               <Trash2 size={16} className={isDeleting ? "animate-pulse" : ""} />

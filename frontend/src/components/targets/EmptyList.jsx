@@ -15,9 +15,17 @@ export default function EmptyList({ statusFilter }) {
       <div className="space-y-2 max-w-md mx-auto">
         <h2 className="text-2xl font-bold text-white">No scans found</h2>
         <p className="text-gray-400">
-          {statusFilter === "all"
-            ? "Your dashboard is looking a bit empty. Launch your first scan to see vulnerabilities here."
-            : `No scans found with status "${statusFilter}".`}
+          {statusFilter === "all" ? (
+            "Your dashboard is looking a bit empty. Launch your first scan to see vulnerabilities here."
+          ) : (
+            <>
+              No scans found with status{" "}
+              <span className="text-primary-100 font-bold capitalize">
+                {statusFilter}
+              </span>
+              .
+            </>
+          )}
         </p>
       </div>
       {statusFilter === "all" && (

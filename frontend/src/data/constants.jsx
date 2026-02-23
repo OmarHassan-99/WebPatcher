@@ -2,7 +2,7 @@ import lottie1 from "../lottie/Technology isometric ai robot brain.json";
 import lottie2 from "../lottie/Web Attack.json";
 import lottie3 from "../lottie/Cybersecurity - Animation.json";
 
-import { Home, Target, User } from "lucide-react";
+import { Home, ShieldAlert, Sparkles, Target, User } from "lucide-react";
 
 export const FEATURES = [
   {
@@ -110,11 +110,6 @@ export const LIST_VARIANTS = {
   visible: { opacity: 1, transition: { staggerChildren: 0.2 } },
 };
 
-export const ITEM_VARIANTS = {
-  hidden: { opacity: 0, y: 20 },
-  visible: { opacity: 1, y: 0 },
-};
-
 export const CONTENT_VARIANTS = {
   hidden: { height: 0, opacity: 0 },
   visible: {
@@ -204,4 +199,9 @@ export const STATUS_OPTIONS = [
   "patching",
   "completed",
   "failed",
+];
+
+export const TABS = [
+  { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert },
+  { id: "recommendations", label: "AI Recommendations", icon: Sparkles },
 ];

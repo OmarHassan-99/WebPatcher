@@ -1,3 +1,4 @@
+import { useState, useCallback } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import Lottie from "lottie-react";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
@@ -10,12 +11,18 @@ import loadingLottieAnimation from "../lottie/Loading - Animation.json";
 import SuccessLottieAnimation from "../lottie/Success.json";
 import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
-import VulnerabilityDashboard from "../components/targetDetails/VulnerabilityDashboard";
 import StageView from "../components/targetDetails/StageView";
+import VulnerabilitiesPanel from "../components/targetDetails/vulnerabilities/VulnerabilitiesPanel";
+import RecommendationsPanel from "../components/targetDetails/recommendations/RecommendationsPanel";
+import TabSwitcher from "../components/targetDetails/TabSwitcher";
 
 export default function TargetDetailsPage({ scanStage, scanResult }) {
   const { targetId } = useParams();
   const csrfToken = useCsrf();
+  const [activeTab, setActiveTab] = useState("vulnerabilities");
+  const [recsCount, setRecsCount] = useState(null);
+
+  const handleCountReady = useCallback((n) => setRecsCount(n), []);
 
   const { data, isPending, error } = useQuery({
     queryKey: ["scans", targetId],
@@ -29,7 +36,7 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
     },
   });
 
-  const status = data?.status; // "queued", "running", "analyzing", "patching", "completed", "failed"
+  const status = data?.status;
   const findings = data?.findings || scanResult || [];
 
   return (
@@ -116,7 +123,7 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
           />
         )}
 
-        {/* 5. COMPLETED STATE (Success + Dashboard) */}
+        {/* 5. COMPLETED STATE */}
         {((status === "completed" && !isPending) || scanStage === "done") && (
           <Motion.div
             key="completed"
@@ -142,8 +149,57 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
               </p>
             </div>
 
-            {/* Dashboard */}
-            <VulnerabilityDashboard findings={findings} />
+            <div className="relative flex items-center justify-center mt-6 mb-2 px-4">
+              <Link
+                to="/targets"
+                className="group absolute left-[25%] inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(255,255,255,0.15)]"
+              >
+                <ArrowLeft
+                  size={15}
+                  className="transition-transform duration-300 group-hover:-translate-x-1"
+                />
+                Back to Targets
+              </Link>
+
+              {/* Tabs */}
+              <div className="inline-flex gap-1 p-1 rounded-2xl bg-transparent backdrop-blur-md border border-white/8 shadow-xl">
+                <TabSwitcher
+                  activeTab={activeTab}
+                  setActiveTab={setActiveTab}
+                  recsCount={recsCount}
+                />
+              </div>
+            </div>
+
+            {/* Tab panels */}
+            <AnimatePresence mode="wait">
+              {activeTab === "vulnerabilities" ? (
+                <Motion.div
+                  key="vulnerabilities"
+                  variants={FADE_VARIANTS}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                >
+                  <VulnerabilitiesPanel findings={findings} />
+                </Motion.div>
+              ) : (
+                <Motion.div
+                  key="recommendations"
+                  variants={FADE_VARIANTS}
+                  initial="hidden"
+                  animate="visible"
+                  exit="exit"
+                  className="py-6 px-4"
+                >
+                  <RecommendationsPanel
+                    scanId={targetId}
+                    csrfToken={csrfToken}
+                    onCountReady={handleCountReady}
+                  />
+                </Motion.div>
+              )}
+            </AnimatePresence>
           </Motion.div>
         )}
       </AnimatePresence>

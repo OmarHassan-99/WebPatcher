@@ -1,5 +1,6 @@
 import ScanJob from "../models/scanJobModel.js";
-import Finding from "../models/FindingModel.js";
+import ScanReport from "../models/ScanReportModel.js";
+import ScanRecommendation from "../models/ScanRecommendationModel.js";
 //import queue from "../services/queue.js";
 import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
@@ -164,10 +165,12 @@ async function generatePatchesInBackground(findings, scanJobId) {
             await createAndSaveRecommendation(
               scanJobId,
               patchData.vulnerability,
-              patchData.patch
+              patchData.patch,
             );
           } catch (dbErr) {
-            console.error(`   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`);
+            console.error(
+              `   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`,
+            );
           }
         } else if (!patchData.success) {
           console.log(
@@ -210,7 +213,7 @@ export async function getScans(req, res) {
       .lean();
 
     const total = await ScanJob.countDocuments(filter);
-    return res.json({ total, page, size, scans, success: true });
+    return res.json({ scans, total, success: true });
   } catch (err) {
     console.error("listScans error:", err);
     return res
@@ -239,7 +242,11 @@ export async function deleteScan(req, res) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
-    await ScanJob.findByIdAndDelete(scanId);
+    await Promise.all([
+      ScanJob.findByIdAndDelete(scanId),
+      ScanReport.deleteOne({ scanJob: scanId }),
+      ScanRecommendation.deleteOne({ scanJob: scanId }),
+    ]);
     return res.json({ success: true, message: "Scan deleted successfully" });
   } catch (err) {
     console.error("deleteScan error:", err);
@@ -262,6 +269,10 @@ export async function deleteBulkScans(req, res) {
       user: req.session.user._id,
       _id: { $in: ids },
     });
+    await Promise.all([
+      ScanReport.deleteMany({ scanJob: { $in: ids } }),
+      ScanRecommendation.deleteMany({ scanJob: { $in: ids } }),
+    ]);
     return res.json({
       success: true,
       message: `${deleted.deletedCount} scans deleted successfully`,
@@ -294,9 +305,15 @@ export async function getFindings(req, res) {
       return res.status(403).json({ success: false, message: "Forbidden" });
     }
 
-    const findings = await Finding.find({ scanJob: scanId })
-      .sort({ severity: -1, createdAt: -1 })
-      .lean();
+    const scanReport = await ScanReport.findOne({ scanJob: scanId }).lean();
+    const findings = scanReport?.findings ?? [];
+
+    // Sort by severity: High → Medium → Low → Informational
+    const severityOrder = { High: 0, Medium: 1, Low: 2, Informational: 3 };
+    findings.sort(
+      (a, b) =>
+        (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4),
+    );
 
     return res.json({ findings, status: scan.status });
   } catch (err) {

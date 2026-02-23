@@ -1,4 +1,4 @@
-import Finding from "../models/FindingModel.js";
+import ScanReport from "../models/ScanReportModel.js";
 import ScanJob from "../models/scanJobModel.js";
 
 export async function extractZapReport(zapReport, scanJobId) {
@@ -6,10 +6,14 @@ export async function extractZapReport(zapReport, scanJobId) {
     throw new Error("Invalid ZAP report format: Missing 'alerts' property");
   }
 
-  const findings = [];
+  // Group alerts by pluginId so we create ONE finding per alert type,
+  // with all affected URLs collected into its instances array.
+  const alertMap = new Map();
 
   for (const alert of zapReport.alerts) {
-    const instances = {
+    const pluginId = alert.pluginId || "0";
+
+    const instance = {
       uri: alert.url || "",
       method: alert.method || "",
       param: alert.param || "",
@@ -17,27 +21,35 @@ export async function extractZapReport(zapReport, scanJobId) {
       evidence: alert.evidence || "",
     };
 
-    findings.push({
-      scanJob: scanJobId,
-      pluginId: alert.pluginId || "0",
-      alertName: alert.name || "Unknown Alert",
-      severity: alert.risk || "Informational",
-      description: alert.description || "",
-      solution: alert.solution || "",
-      instances,
-      cweId: alert.cweid || null,
-    });
+    if (alertMap.has(pluginId)) {
+      alertMap.get(pluginId).instances.push(instance);
+    } else {
+      alertMap.set(pluginId, {
+        pluginId,
+        alertName: alert.name || "Unknown Alert",
+        severity: alert.risk || "Informational",
+        description: alert.description || "",
+        solution: alert.solution || "",
+        instances: [instance],
+        cweId: alert.cweid || null,
+      });
+    }
   }
 
-  const createdFindings = await Finding.insertMany(findings);
+  const findings = Array.from(alertMap.values());
+
+  const scanReport = await ScanReport.create({
+    scanJob: scanJobId,
+    findings,
+  });
 
   await ScanJob.findByIdAndUpdate(scanJobId, {
     $set: {
       status: "completed",
+      findingsCount: findings.length,
       finishedAt: Date.now(),
     },
-    $push: { findings: { $each: createdFindings.map((f) => f._id) } },
   });
 
-  return createdFindings;
+  return scanReport.findings;
 }

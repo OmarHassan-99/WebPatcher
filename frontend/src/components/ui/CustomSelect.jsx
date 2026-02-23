@@ -34,7 +34,7 @@ export default function CustomSelect({ value, onChange, options }) {
           border border-white/10 hover:border-primary-500/50
           text-sm font-medium text-gray-200
           transition-all duration-300
-          focus:outline-none focus:ring-2 focus:ring-primary-500/20
+          focus:outline-none focus:ring-2 focus:ring-primary-500/20 cursor-pointer
           ${isOpen ? "border-primary-500 ring-2 ring-primary-500/20" : ""}
         `}
       >

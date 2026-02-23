@@ -6,7 +6,8 @@ import crypto from "crypto";
 
 import "dotenv/config.js";
 import ScanJob from "../models/scanJobModel.js";
-import Finding from "../models/FindingModel.js";
+import ScanReport from "../models/ScanReportModel.js";
+import ScanRecommendation from "../models/ScanRecommendationModel.js";
 
 function trimInput(input) {
   return typeof input === "string" ? input.trim() : "";
@@ -217,7 +218,7 @@ export async function changePassword(req, res) {
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
       { password: hashedPassword },
-      { new: true }
+      { new: true },
     ).select("-password");
 
     req.session.user = {
@@ -307,8 +308,8 @@ export async function updateUserInfo(req, res) {
         updates.name !== user.name && updates.email !== user.email
           ? "User information updated successfully"
           : updates.name !== user.name
-          ? "Name updated successfully"
-          : "Email updated successfully",
+            ? "Name updated successfully"
+            : "Email updated successfully",
       user: req.session.user,
     });
   } catch (err) {
@@ -331,7 +332,7 @@ export function redirectToGitHubAuth(req, res) {
   const redirectUri = `https://github.com/login/oauth/authorize?client_id=${
     process.env.GITHUB_CLIENT_ID
   }&scope=${encodeURIComponent(
-    "read:user user:email repo"
+    "read:user user:email repo",
   )}&redirect_uri=http://localhost:${
     process.env.PORT
   }/auth/github/callback?mode=${mode}&state=${state}`;
@@ -364,7 +365,7 @@ export async function githubCallback(req, res) {
         client_secret: process.env.GITHUB_CLIENT_SECRET,
         code,
       },
-      { headers: { Accept: "application/json" } }
+      { headers: { Accept: "application/json" } },
     );
 
     const accessToken = tokenResponse.data.access_token;
@@ -387,7 +388,7 @@ export async function githubCallback(req, res) {
 
     if (!primaryEmail) {
       const errorMsg = encodeURIComponent(
-        "No valid email found from your GitHub account. Please verify your email on GitHub first"
+        "No valid email found from your GitHub account. Please verify your email on GitHub first",
       );
       return res.redirect(`${redirectBack}?github_error=${errorMsg}`);
     }
@@ -431,14 +432,14 @@ export async function githubCallback(req, res) {
       const currentUser = req.session.user;
       if (!currentUser) {
         const errorMsg = encodeURIComponent(
-          "You must be logged in to link your GitHub account"
+          "You must be logged in to link your GitHub account",
         );
         return res.redirect(`${redirectBack}?github_error=${errorMsg}`);
       }
 
       if (currentUser.githubId) {
         const errorMsg = encodeURIComponent(
-          "You already have a GitHub account linked to your account"
+          "You already have a GitHub account linked to your account",
         );
         return res.redirect(`${redirectBack}?github_error=${errorMsg}`);
       }
@@ -451,7 +452,7 @@ export async function githubCallback(req, res) {
         existingGitHubUser._id.toString() !== currentUser._id.toString()
       ) {
         const errorMsg = encodeURIComponent(
-          "This GitHub account is already linked to another user"
+          "This GitHub account is already linked to another user",
         );
         return res.redirect(`${redirectBack}?github_error=${errorMsg}`);
       }
@@ -463,7 +464,7 @@ export async function githubCallback(req, res) {
           githubUsername: userResponse.data.login,
           githubAccessToken: accessToken,
         },
-        { new: true }
+        { new: true },
       );
       req.session.user = {
         _id: user._id,
@@ -477,18 +478,18 @@ export async function githubCallback(req, res) {
     req.session.save((err) => {
       if (err) console.error("Session save error", err);
       const successMsg = encodeURIComponent(
-        "GitHub account linked successfully!"
+        "GitHub account linked successfully!",
       );
       res.redirect(
         `${
           mode === "login" ? process.env.FRONT_END_ORIGIN : redirectBack
-        }?github_success=${successMsg}`
+        }?github_success=${successMsg}`,
       );
     });
   } catch (error) {
     console.error("GitHub OAuth error:", error);
     const errorMsg = encodeURIComponent(
-      error.message || "Failed to authenticate with GitHub. Please try again"
+      error.message || "Failed to authenticate with GitHub. Please try again",
     );
     return res.redirect(`${redirectBack}?github_error=${errorMsg}`);
   } finally {
@@ -617,9 +618,12 @@ export async function deleteAccount(req, res) {
       });
     }
 
+    const scanIds = await ScanJob.distinct("_id", { user: userId });
+
     await Promise.all([
-      ScanJob.deleteMany({ userId }),
-      Finding.deleteMany({ userId }),
+      ScanJob.deleteMany({ user: userId }),
+      ScanReport.deleteMany({ scanJob: { $in: scanIds } }),
+      ScanRecommendation.deleteMany({ scanJob: { $in: scanIds } }),
     ]);
 
     await User.findByIdAndDelete(userId);

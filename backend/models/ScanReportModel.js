@@ -8,32 +8,14 @@ const instanceSchema = new mongoose.Schema(
     attack: String,
     evidence: String,
   },
-  { _id: false }
+  { _id: false },
 );
 
-// If we will store it in the database later
-/*
-const patchSchema = new mongoose.Schema(
-  {
-    analysis: String,
-    root_cause: String,
-    suggested_fix: String,
-    file_type: String,
-  },
-  { _id: false }
-);
-*/
 const findingSchema = new mongoose.Schema(
   {
-    scanJob: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "ScanJob",
-      required: true,
-    },
     pluginId: {
       type: String,
       required: true,
-      index: true,
     },
     alertName: {
       type: String,
@@ -57,20 +39,28 @@ const findingSchema = new mongoose.Schema(
     cweId: {
       type: String,
     },
-    // AI-generated patch recommendation
-    // patch: {
-    //   type: patchSchema,
-    //   default: null,
-    // },
-    // patchGeneratedAt: {
-    //   type: Date,
-    //   default: null,
-    // },
   },
-  { timestamps: true }
+  { _id: false },
 );
 
-const Finding =
-  mongoose.models.Finding || mongoose.model("Finding", findingSchema);
+const scanReportSchema = new mongoose.Schema(
+  {
+    scanJob: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ScanJob",
+      required: true,
+      unique: true,
+      index: true,
+    },
+    findings: {
+      type: [findingSchema],
+      default: [],
+    },
+  },
+  { timestamps: true },
+);
 
-export default Finding;
+const ScanReport =
+  mongoose.models.ScanReport || mongoose.model("ScanReport", scanReportSchema);
+
+export default ScanReport;
