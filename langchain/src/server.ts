@@ -51,7 +51,7 @@ app.post("/generate-patches", async (req, res) => {
             });
         }
 
-
+        const startTime = Date.now();
         console.log(`\nStarting patch generation for ${vulnerabilities.length} vulnerabilities...`);
         console.log(`   Estimated time: ${vulnerabilities.length} - ${vulnerabilities.length * 2} minutes\n`);
 
@@ -82,7 +82,9 @@ app.post("/generate-patches", async (req, res) => {
         });
 
         const successCount = patches.filter(p => p.success).length;
-        logger.info(`[LangChain API] Generated ${successCount} patches successfully`);
+        const endTime = Date.now();
+        const totalTimeSeconds = ((endTime - startTime) / 1000).toFixed(1);
+        logger.info(`[LangChain API] Generated ${successCount} patches successfully in ${totalTimeSeconds} seconds`);
 
 
         console.log("\n" + "=".repeat(80));
