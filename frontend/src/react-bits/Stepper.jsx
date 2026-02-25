@@ -315,7 +315,7 @@ function StepIndicator({
 function StepConnector({ isComplete }) {
   const lineVariants = {
     incomplete: { width: 0, backgroundColor: "rgba(0,0,0,0)" },
-    complete: { width: "100%", backgroundColor: "#5227FF" },
+    complete: { width: "100%", backgroundColor: "#fff" },
   };
 
   return (

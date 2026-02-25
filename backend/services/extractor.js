@@ -44,11 +44,7 @@ export async function extractZapReport(zapReport, scanJobId) {
   });
 
   await ScanJob.findByIdAndUpdate(scanJobId, {
-    $set: {
-      status: "completed",
-      findingsCount: findings.length,
-      finishedAt: Date.now(),
-    },
+    $set: { findingsCount: findings.length },
   });
 
   return scanReport.findings;

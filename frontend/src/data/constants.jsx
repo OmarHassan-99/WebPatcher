@@ -2,6 +2,11 @@ import lottie1 from "../lottie/Technology isometric ai robot brain.json";
 import lottie2 from "../lottie/Web Attack.json";
 import lottie3 from "../lottie/Cybersecurity - Animation.json";
 
+import loadingLottieAnimation from "../lottie/Loading - Animation.json";
+import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
+import SuccessLottieAnimation from "../lottie/Success.json";
+import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
+
 import { Home, ShieldAlert, Sparkles, Target, User } from "lucide-react";
 
 export const FEATURES = [
@@ -205,3 +210,60 @@ export const TABS = [
   { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert },
   { id: "recommendations", label: "AI Recommendations", icon: Sparkles },
 ];
+
+export const STAGES = [
+  { key: "init", label: "Init", desc: "Preparing ZAP session" },
+  { key: "spider", label: "Spider", desc: "Mapping pages & endpoints" },
+  {
+    key: "ajax_spider",
+    label: "AJAX Spider",
+    desc: "Crawling dynamic content",
+  },
+  { key: "active_scan", label: "Active Scan", desc: "Probing vulnerabilities" },
+  { key: "extracting", label: "Analyzing", desc: "Classifying findings" },
+  { key: "patching", label: "AI Patching", desc: "Generating fixes" },
+  { key: "done", label: "Complete", desc: "Scan finished" },
+];
+
+export const STAGE_ORDER = Object.fromEntries(STAGES.map((s, i) => [s.key, i]));
+
+export function GET_STAGE_STATUS(stageKey, currentStage) {
+  const si = STAGE_ORDER[stageKey] ?? -1;
+  const ci = STAGE_ORDER[currentStage] ?? -1;
+  if (si < ci) return "done";
+  if (si === ci) return "active";
+  return "pending";
+}
+
+export const RISK_COLORS_SCAN = {
+  High: {
+    dot: "bg-red-400",
+    text: "text-red-400",
+    pill: "bg-red-400/10 border-red-400/20",
+  },
+  Medium: {
+    dot: "bg-amber-400",
+    text: "text-amber-400",
+    pill: "bg-amber-400/10 border-amber-400/20",
+  },
+  Low: {
+    dot: "bg-yellow-400",
+    text: "text-yellow-400",
+    pill: "bg-yellow-400/10 border-yellow-400/20",
+  },
+  Informational: {
+    dot: "bg-blue-400",
+    text: "text-blue-400",
+    pill: "bg-blue-400/10 border-blue-400/20",
+  },
+};
+
+export function GET_LOTTIE(stage, isError) {
+  if (isError)
+    return { id: "error", animation: ErrorLottieAnimation, loop: false };
+  if (stage === "done")
+    return { id: "success", animation: SuccessLottieAnimation, loop: false };
+  if (["active_scan", "extracting", "patching"].includes(stage))
+    return { id: "ai", animation: AiProcessorLottieAnimation, loop: true };
+  return { id: "loading", animation: loadingLottieAnimation, loop: true };
+}

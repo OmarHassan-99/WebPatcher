@@ -1,13 +1,17 @@
-import { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import Stepper, { Step } from "../react-bits/Stepper";
-import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
-import { queryClient } from "../utils/http/userAuth";
+import {
+  startZapScan,
+  validateTargetAndRepoURLs,
+  getFindings,
+} from "../utils/http/zap";
 import useCsrf from "../hooks/useCsrf";
-
+import { useScanProgress } from "../hooks/useScanProgress";
 import TargetAndRepoURLs from "../components/targets/newTarget/Target&RepoURLs";
 import AiContext from "../components/targets/newTarget/AiContext";
+import ScanProgressPanel from "../components/targets/newTarget/scanProgressPanel/ScanProgressPanel";
 import TargetDetailsPage from "./TargetDetails";
 
 const GITHUB_INSTALL_URL =
@@ -23,15 +27,12 @@ export default function NewTargetPage() {
   });
   const [error, setError] = useState({ targetUrl: "", githubRepoUrl: "" });
   const [isAnimatePulse, setIsAnimatePulse] = useState(true);
-  const [scanStage, setScanStage] = useState(null);
-  const [scanResult, setScanResult] = useState(null);
+  const [activeScanJobId, setActiveScanJobId] = useState(null);
 
   const csrfToken = useCsrf();
 
   const { mutateAsync: validateMutate, isPending: isPendingValidation } =
-    useMutation({
-      mutationFn: validateTargetAndRepoURLs,
-    });
+    useMutation({ mutationFn: validateTargetAndRepoURLs });
 
   async function handleUrlsValidation() {
     setError({ targetUrl: "", githubRepoUrl: "" });
@@ -43,16 +44,12 @@ export default function NewTargetPage() {
         targetURL: formData.targetUrl,
         githubRepoUrl: formData.githubRepoUrl,
       });
-
       return true;
     } catch (err) {
       if (err.isValidationError) {
         const newErrors = { ...err.errors };
 
-        if (
-          newErrors.githubRepoUrl &&
-          newErrors.githubRepoUrl.includes("not found")
-        ) {
+        if (newErrors.githubRepoUrl?.includes("not found")) {
           setIsAnimatePulse(false);
           newErrors.githubRepoUrl = (
             <span className="flex flex-col items-start gap-2">
@@ -80,9 +77,35 @@ export default function NewTargetPage() {
 
   const { mutate: startScanMutate } = useMutation({ mutationFn: startZapScan });
 
+  const progress = useScanProgress(activeScanJobId);
+
+  const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false);
+
+  useEffect(() => {
+    if (progress.isDone) {
+      const timer = setTimeout(() => {
+        setMinLoadingTimeElapsed(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setMinLoadingTimeElapsed(false); // Reset if a new scan starts
+    }
+  }, [progress.isDone]);
+
+  // Fetch findings once the WS signals the scan is fully done
+  const { data: findings } = useQuery({
+    queryKey: ["scans", activeScanJobId],
+    queryFn: () => getFindings({ csrfToken, scanId: activeScanJobId }),
+    enabled: !!activeScanJobId && progress.isDone,
+    retry: false,
+  });
+
+  const isShowingResults =
+    progress.isDone && findings !== undefined && minLoadingTimeElapsed;
+
+  const isLoadingResults = progress.isDone && !isShowingResults;
+
   function handleStartScan() {
-    setScanStage("scan");
-    queryClient.resetQueries({ queryKey: ["scans"] });
     startScanMutate(
       {
         csrfToken,
@@ -93,17 +116,12 @@ export default function NewTargetPage() {
       },
       {
         onSuccess: (data) => {
-          setScanStage("analyze");
-          setTimeout(() => {
-            setScanResult(data);
-            queryClient.resetQueries({ queryKey: ["scans"] });
-            setScanStage("done");
-          }, 3500);
+          setActiveScanJobId(data.scanJobId);
         },
         onError: (err) => {
           console.error("Scan failed:", err);
-          setError("Failed to start scan");
-          setScanStage(null);
+          setError({ targetUrl: "Failed to start scan", githubRepoUrl: "" });
+          setActiveScanJobId(null);
         },
       },
     );
@@ -136,8 +154,11 @@ export default function NewTargetPage() {
   return (
     <div className="text-white overflow-hidden">
       <Stepper
-        stepContainerClassName={`${scanStage !== null ? "hidden" : ""}`}
-        onFinalStepCompleted={handleStartScan}
+        stepContainerClassName={activeScanJobId !== null ? "hidden" : ""}
+        onFinalStepCompleted={() => {
+          setActiveScanJobId("pending");
+          handleStartScan();
+        }}
       >
         <Step
           stepLabel="Target & Repo URLs"
@@ -159,8 +180,21 @@ export default function NewTargetPage() {
         </Step>
       </Stepper>
 
-      {scanStage !== null && (
-        <TargetDetailsPage scanStage={scanStage} scanResult={scanResult} />
+      {activeScanJobId !== null && !isShowingResults && (
+        <div className="flex justify-center py-6">
+          <ScanProgressPanel
+            scanJobId={activeScanJobId}
+            isLoadingResults={isLoadingResults}
+          />
+        </div>
+      )}
+
+      {isShowingResults && (
+        <TargetDetailsPage
+          fromNewTargetPage={true}
+          scanResult={findings?.findings ?? []}
+          scanId={activeScanJobId}
+        />
       )}
     </div>
   );

@@ -13,7 +13,7 @@ export default function TargetsBulkHeader({
       <div className="flex items-center gap-4">
         <button
           onClick={() => setSelectedIds(new Set())}
-          className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
+          className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors cursor-pointer"
         >
           <X size={20} />
         </button>
@@ -24,14 +24,14 @@ export default function TargetsBulkHeader({
       <div className="flex items-center gap-3">
         <button
           onClick={toggleSelectAll}
-          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors"
+          className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium text-gray-400 hover:text-white hover:bg-white/5 transition-colors cursor-pointer"
         >
           {selectedIds.size === scans.length ? "Deselect All" : "Select All"}
         </button>
         <button
           onClick={handleDeleteSelected}
           disabled={isDeleting}
-          className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-xl transition-all font-medium text-sm disabled:opacity-50"
+          className="flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 px-5 py-2.5 rounded-xl transition-all font-medium text-sm disabled:opacity-50 cursor-pointer"
         >
           {isDeleting ? (
             <Loader2 className="animate-spin" size={18} />

@@ -9,18 +9,24 @@ import { getFindings } from "../utils/http/zap";
 import { FADE_VARIANTS } from "../data/constants";
 import loadingLottieAnimation from "../lottie/Loading - Animation.json";
 import SuccessLottieAnimation from "../lottie/Success.json";
-import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
 import StageView from "../components/targetDetails/StageView";
 import VulnerabilitiesPanel from "../components/targetDetails/vulnerabilities/VulnerabilitiesPanel";
 import RecommendationsPanel from "../components/targetDetails/recommendations/RecommendationsPanel";
 import TabSwitcher from "../components/targetDetails/TabSwitcher";
+import ScanProgressPanel from "../components/targets/newTarget/scanProgressPanel/ScanProgressPanel";
 
-export default function TargetDetailsPage({ scanStage, scanResult }) {
-  const { targetId } = useParams();
+export default function TargetDetailsPage({
+  fromNewTargetPage,
+  scanResult,
+  scanId,
+}) {
+  const { targetId: targetIdParam } = useParams();
   const csrfToken = useCsrf();
   const [activeTab, setActiveTab] = useState("vulnerabilities");
   const [recsCount, setRecsCount] = useState(null);
+
+  const targetId = targetIdParam ?? scanId;
 
   const handleCountReady = useCallback((n) => setRecsCount(n), []);
 
@@ -29,11 +35,6 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
     queryFn: () => getFindings({ csrfToken, scanId: targetId }),
     enabled: !!targetId,
     retry: false,
-    refetchInterval: (query) => {
-      if (query.state.error) return false;
-      const status = query.state.data?.status;
-      return status === "running" || status === "queued" ? 3000 : false;
-    },
   });
 
   const status = data?.status;
@@ -43,19 +44,11 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
     <div className="text-white flex justify-center items-center">
       <AnimatePresence mode="wait">
         {/* 1. LOADING (Initial Fetch) */}
-        {((isPending && !scanStage) || scanStage === "scan") && (
+        {isPending && !fromNewTargetPage && (
           <StageView
             key="loading"
             animation={loadingLottieAnimation}
-            text={
-              scanStage === "scan"
-                ? "Scanning target for vulnerabilities…"
-                : "Retrieving historical data..."
-            }
-            subtext={
-              scanStage === "scan" &&
-              "You can leave this page. The scan will continue in the background."
-            }
+            text="Retrieving historical data..."
             extraMargin
           />
         )}
@@ -88,25 +81,27 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
           </Motion.div>
         )}
 
-        {/* 3. RUNNING / QUEUED STATE */}
-        {(scanStage === "analyze" ||
-          status === "running" ||
+        {(status === "running" ||
+          status === "analyzing" ||
+          status === "patching" ||
           status === "queued") && (
-          <StageView
+          <Motion.div
             key="running"
-            animation={
-              status === "queued"
-                ? loadingLottieAnimation
-                : AiProcessorLottieAnimation
-            }
-            text={
-              status === "queued"
-                ? "Scan is in queue..."
-                : "Analyzing and classifying results…"
-            }
-            extraMargin
-            noMargin={status === "queued" ? false : true}
-          />
+            variants={FADE_VARIANTS}
+            initial="hidden"
+            animate="visible"
+            className="flex justify-center py-12"
+          >
+            {status === "queued" ? (
+              <StageView
+                animation={loadingLottieAnimation}
+                text="Scan is in queue…"
+                extraMargin
+              />
+            ) : (
+              <ScanProgressPanel scanJobId={targetId} initialStatus={status} />
+            )}
+          </Motion.div>
         )}
 
         {/* 4. FAILED STATE */}
@@ -124,14 +119,14 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
         )}
 
         {/* 5. COMPLETED STATE */}
-        {((status === "completed" && !isPending) || scanStage === "done") && (
+        {((status === "completed" && !isPending) || fromNewTargetPage) && (
           <Motion.div
             key="completed"
             variants={FADE_VARIANTS}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className="flex flex-col w-full"
+            className={`flex flex-col w-full ${!fromNewTargetPage && "mt-8"}`}
           >
             <div className="flex flex-col items-center">
               <Lottie
@@ -149,26 +144,32 @@ export default function TargetDetailsPage({ scanStage, scanResult }) {
               </p>
             </div>
 
-            <div className="relative flex items-center justify-center mt-6 mb-2 px-4">
-              <Link
-                to="/targets"
-                className="group absolute left-[25%] inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(255,255,255,0.15)]"
-              >
-                <ArrowLeft
-                  size={15}
-                  className="transition-transform duration-300 group-hover:-translate-x-1"
-                />
-                Back to Targets
-              </Link>
+            <div className="grid grid-cols-3 items-center w-full mt-6 mb-4 px-4">
+              <div className="flex justify-start">
+                <Link
+                  to="/targets"
+                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/8 transition-all"
+                >
+                  <ArrowLeft
+                    size={15}
+                    className="transition-transform group-hover:-translate-x-1"
+                  />
+                  <span className="hidden sm:inline">Back to Targets</span>
+                </Link>
+              </div>
 
               {/* Tabs */}
-              <div className="inline-flex gap-1 p-1 rounded-2xl bg-transparent backdrop-blur-md border border-white/8 shadow-xl">
-                <TabSwitcher
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  recsCount={recsCount}
-                />
+              <div className="flex justify-center">
+                <div className="inline-flex gap-1 p-1 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10 shadow-xl">
+                  <TabSwitcher
+                    activeTab={activeTab}
+                    setActiveTab={setActiveTab}
+                    recsCount={recsCount}
+                  />
+                </div>
               </div>
+
+              <div className="flex justify-end"></div>
             </div>
 
             {/* Tab panels */}

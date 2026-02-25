@@ -13,6 +13,7 @@ import {
 } from "../services/patchService.js";
 import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
+import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -56,10 +57,11 @@ export async function validateTargetAndRepoURLs(req, res) {
 
 export async function startZapScan(req, res) {
   const { url, targetName, githubRepoUrl, context } = req.body;
-  let scanJobId = null;
+  const userId = req.session.user._id;
 
   try {
     console.log(`[ScanController] Received request to scan URL: ${url}`);
+
     const scan = await ScanJob.create({
       user: req.session.user._id,
       targetUrl: url,
@@ -67,40 +69,45 @@ export async function startZapScan(req, res) {
       targetName,
       context,
     });
-    scanJobId = scan._id;
 
-    const { report } = await runZapScanService(url, scan._id);
+    res.status(202).json({ scanJobId: scan._id.toString() });
 
-    // Uncomment lama n3mel el queue
-    // if (queue && typeof queue.add === "function") {
-    //   await queue.add("scan", { scanId: scan._id });
-    // }
+    broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
 
-    const extractedReport = await extractZapReport(report, scan._id);
-
-    console.log("[ScanController] Scan complete. Sending report to user");
-
-    // Send response immediately so user sees results
-    res.status(200).json(extractedReport);
-
-    // Generate patches in background (don't await - runs after response)
-    console.log("[ScanController] Starting patch generation in background...");
-    generatePatchesInBackground(extractedReport, scanJobId);
+    runScanInBackground(url, scan._id, userId);
   } catch (error) {
-    console.error("[ScanController] An error occurred:", error);
-    if (scanJobId) {
-      await ScanJob.findByIdAndUpdate(scanJobId, {
-        $set: {
-          status: "failed",
-          finishedAt: Date.now(),
-        },
-      });
-    }
-    res.status(500).json({ message: "Failed to complete the scan" });
+    console.error("[ScanController] Failed to create scan job:", error);
+    res.status(500).json({ message: "Failed to start scan" });
   }
 }
 
-async function generatePatchesInBackground(findings, scanJobId) {
+async function runScanInBackground(url, scanJobId, userId) {
+  try {
+    const { report } = await runZapScanService(url, scanJobId, userId);
+
+    const extractedReport = await extractZapReport(report, scanJobId);
+
+    console.log("[ScanController] Scan complete. Starting patch generation...");
+    generatePatchesInBackground(extractedReport, scanJobId, userId);
+  } catch (error) {
+    console.error("[ScanController] Background scan error:", error);
+
+    await ScanJob.findByIdAndUpdate(scanJobId, {
+      $set: { status: "failed", finishedAt: Date.now() },
+    });
+
+    broadcastToUser(userId, "scan:status", {
+      scanJobId: scanJobId.toString(),
+      status: "failed",
+    });
+
+    emitScanEvent(scanJobId, "scan:error", {
+      message: error.message || "Scan failed",
+    });
+  }
+}
+
+async function generatePatchesInBackground(findings, scanJobId, userId) {
   try {
     // Check if LangChain API is running
     const isHealthy = await isLangChainApiHealthy();
@@ -111,12 +118,41 @@ async function generatePatchesInBackground(findings, scanJobId) {
       console.log(
         "[ScanController] To enable patches, run: cd langchain && npm run server",
       );
+
+      await ScanJob.findByIdAndUpdate(scanJobId, {
+        $set: { status: "completed", finishedAt: Date.now() },
+      });
+      broadcastToUser(userId, "scan:status", {
+        scanJobId: scanJobId.toString(),
+        status: "completed",
+      });
+
+      emitScanEvent(scanJobId, "scan:complete", {
+        stage: "done",
+        successCount: 0,
+        total: 0,
+        message: "Scan complete (AI patching skipped — LangChain not running)",
+      });
       return;
     }
 
     console.log(
       `[ScanController] Generating patches for ${findings.length} finding(s)...`,
     );
+
+    await ScanJob.findByIdAndUpdate(scanJobId, {
+      $set: { status: "patching" },
+    });
+    broadcastToUser(userId, "scan:status", {
+      scanJobId: scanJobId.toString(),
+      status: "patching",
+    });
+
+    emitScanEvent(scanJobId, "scan:stage", {
+      stage: "patching",
+      message: `AI generating patches for ${findings.length} finding(s)…`,
+      total: findings.length,
+    });
 
     // Retrieve scan context to pass to LLM
     const scan = await ScanJob.findById(scanJobId).lean();
@@ -129,36 +165,21 @@ async function generatePatchesInBackground(findings, scanJobId) {
     );
 
     if (patchResult.success) {
-      const successCount = patchResult.patches.filter((p) => p.success).length;
-      const failedCount = patchResult.patches.filter((p) => !p.success).length;
-
-      console.log(
-        `[ScanController] Attempted ${patchResult.patches.length} patches: ${successCount} succeeded, ${failedCount} failed`,
-      );
+      const total = patchResult.patches.length;
+      let successCount = 0;
 
       console.log("\n" + "=".repeat(80));
       console.log(" AI-GENERATED PATCHES");
       console.log("=".repeat(80));
 
       let patchNum = 0;
-      for (const patchData of patchResult.patches) {
+      for (const [index, patchData] of patchResult.patches.entries()) {
         if (patchData.success && patchData.patch) {
           patchNum++;
+          successCount++;
           console.log(`\n [${patchNum}] ${patchData.vulnerability.alert_name}`);
           console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
           console.log(`   URL: ${patchData.vulnerability.affected_url}`);
-          console.log("-".repeat(60));
-          console.log(`    REASONING:`);
-          console.log(`   ${patchData.patch.reasoning}`);
-          console.log(`\n    VULNERABLE CODE EXAMPLE:`);
-          console.log(`   ${patchData.patch.vulnerable_code_example}`);
-          console.log(`\n    ANALYSIS:`);
-          console.log(`   ${patchData.patch.analysis}`);
-          console.log(`\n    ROOT CAUSE:`);
-          console.log(`   ${patchData.patch.root_cause}`);
-          console.log(`\n    FILE TYPE: ${patchData.patch.file_type}`);
-          console.log(`\n    SUGGESTED FIX:`);
-          console.log(`   ${patchData.patch.suggested_fix}`);
           console.log("-".repeat(60));
 
           try {
@@ -172,30 +193,73 @@ async function generatePatchesInBackground(findings, scanJobId) {
               `   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`,
             );
           }
+
+          emitScanEvent(scanJobId, "scan:patch", {
+            index: index + 1,
+            total,
+            alert_name: patchData.vulnerability.alert_name,
+            risk_level: patchData.vulnerability.risk_level,
+            success: true,
+          });
         } else if (!patchData.success) {
           console.log(
             `\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`,
           );
           console.log(`   Error: ${patchData.error}`);
+
+          emitScanEvent(scanJobId, "scan:patch", {
+            index: index + 1,
+            total,
+            alert_name: patchData.vulnerability?.alert_name || "Unknown",
+            success: false,
+            error: patchData.error,
+          });
         }
       }
 
       console.log("\n" + "=".repeat(80));
-      console.log(
-        ` ${successCount}/${patchResult.patches.length} patches generated successfully`,
-      );
+      console.log(` ${successCount}/${total} patches generated successfully`);
       console.log("=".repeat(80) + "\n");
+
+      await ScanJob.findByIdAndUpdate(scanJobId, {
+        $set: { status: "completed", finishedAt: Date.now() },
+      });
+      broadcastToUser(userId, "scan:status", {
+        scanJobId: scanJobId.toString(),
+        status: "completed",
+      });
+
+      emitScanEvent(scanJobId, "scan:complete", {
+        stage: "done",
+        successCount,
+        total,
+        message: `Scan complete — ${successCount}/${total} patches generated`,
+      });
     } else {
       console.error(
         "[ScanController] Patch generation failed:",
         patchResult.error,
       );
+      emitScanEvent(scanJobId, "scan:error", {
+        message: patchResult.error || "Patch generation failed",
+      });
     }
   } catch (error) {
     console.error(
       "[ScanController] Background patch generation error:",
       error.message,
     );
+
+    // uncomment the following if we want to update the scan status to failed if the patch generation fails
+    // await ScanJob.findByIdAndUpdate(scanJobId, {
+    //   $set: { status: "failed", finishedAt: Date.now() },
+    // });
+    // broadcastToUser(userId, "scan:status", {
+    //   scanJobId: scanJobId.toString(),
+    //   status: "failed",
+    // });
+
+    emitScanEvent(scanJobId, "scan:error", { message: error.message });
   }
 }
 
