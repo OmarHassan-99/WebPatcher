@@ -4,4 +4,4 @@ if exist "%USERPROFILE%\ZAP\.ZAP_JVM.properties" (
 	set jvmopts=-Xmx512m
 )
 
-java %jvmopts% -jar zap-2.16.1.jar %*
+java %jvmopts% -jar zap-2.17.0.jar %*

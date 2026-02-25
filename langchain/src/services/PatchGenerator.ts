@@ -1,90 +1,95 @@
-import { ChatOllama } from "@langchain/ollama";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { VulnerabilityInputSchema, PatchOutputSchema } from "../schemas";
 import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "../types";
 import { PatchGenerationError } from "../types";
 import { z } from "zod";
-
+import { LLMProvider } from "./LLMProvider";
 
 export class PatchGenerator {
-    private llm: ChatOllama;
     private promptTemplate: ChatPromptTemplate;
+    private llmProvider: LLMProvider;
 
     constructor(config?: PatchGeneratorConfig) {
-        const baseUrl = config?.baseUrl ?? "http://127.0.0.1:11434";
-        const model = config?.model ?? "mistral";
-        const temperature = config?.temperature ?? 0.3;
-
-
-        this.llm = new ChatOllama({
-            baseUrl,
-            model,
-            temperature,
-            format: "json",
+        // Initialize the Singleton Provider
+        this.llmProvider = LLMProvider.getInstance({
+            baseUrl: config?.baseUrl,
+            temperature: config?.temperature
         });
-
 
         this.promptTemplate = ChatPromptTemplate.fromMessages([
             [
                 "system",
-                `You are a Senior Secure Coding Engineer with years of experience in application security.
-Your expertise includes:
-- Identifying and remediating OWASP Top 10 vulnerabilities
-- Secure code review and penetration testing
-- Writing secure code in multiple programming languages and frameworks
-- Understanding attack vectors and exploitation techniques
+                `Act as a Senior Application Security Engineer and Secure Code Reviewer.
 
-When analyzing vulnerabilities, you MUST provide ALL of the following fields in your response:
+Your task is to generate a REALISTIC, production-ready remediation based on a ZAP alert.
 
-1. **reasoning**: Your thought process analyzing the tech stack context
-2. **vulnerable_code_example**: Complete code showing the vulnerability (in user's stack)
-3. **analysis**: Security analysis of impact and attack scenarios
-4. **root_cause**: Exact root cause in code or configuration
-5. **suggested_fix**: Production-ready secure code fix (in user's stack)
-6. **file_type**: Programming language/file type
+You MUST output EXACTLY one valid JSON object with these 6 fields:
+1. reasoning
+2. vulnerable_code_example
+3. analysis
+4. root_cause
+5. suggested_fix
+6. file_type
 
-CRITICAL: You MUST generate ALL SIX fields. If any field is missing, your response is invalid.
+Hard requirements:
 
-If Tech Stack context is provided (languages, frameworks, databases), use those EXACT technologies in your code examples. For Python/Django users, show Python/Django code. For JavaScript/Express users, show JavaScript/Express code.
+- Output ONLY raw JSON. No markdown. No explanations.
+- The fix MUST be directly implementable in a real project.
+- DO NOT give generic advice.
+- DO NOT say “use parameterized queries” without showing the REAL code.
+- Infer the backend technology from the Tech Stack or from the URL/port/pattern.
+- The vulnerable code MUST look like real code from a real controller/service/repository.
+- Show the TRUE injection sink (query, ORM call, template render, header config, etc.).
+- The suggested_fix MUST be a secure full replacement snippet, not a comment.
+- If the issue is a missing header → show the exact middleware / server config.
+- If the issue is input handling → show validation + safe usage.
+- Keep examples minimal but realistic and runnable.
 
-Always respond with accurate, implementable security fixes that follow industry best practices and match the user's technology stack.`,
+Code quality rules:
+
+- Follow best practices of the detected framework.
+- Use modern secure patterns (ORM, prepared statements, security middleware, CSP libraries, etc.).
+- Do NOT use pseudo-code.
+- Do NOT output placeholders like “your_table”.
+
+Reasoning rules:
+
+- Max 2 short sentences.
+- Focus only on why this code is vulnerable and why the fix works.
+
+Context handling:
+
+- If Tech Stack is provided → you MUST use it.
+- If not provided → infer the most likely stack from the URL and vulnerability type and state it in file_type.
+
+Security depth:
+
+- Show both:
+  - the vulnerable data flow
+  - the secured data flow
+
+Keep the response compact for fast LLM generation.`
             ],
             [
                 "human",
-                `Analyze the following security vulnerability and provide a detailed patch recommendation.
-
-**IMPORTANT**: You MUST respond with ALL SIX required fields. Do not skip any field.
-
-**Vulnerability Name:** {alert_name}
-**Risk Level:** {risk_level}
-**Affected URL:** {affected_url}
-**Description:** {description}
+                `Vulnerability: {alert_name}
+Risk: {risk_level}
+URL: {affected_url}
+Description: {description}
 {evidence_section}
-{additional_context}
-
-Your response MUST include:
-1. reasoning - Your thought process considering the tech stack
-2. vulnerable_code_example - Complete vulnerable code in the user's tech stack
-3. analysis - Security impact and attack scenarios
-4. root_cause - Exact cause of the vulnerability
-5. suggested_fix - Secure code fix in the user's tech stack
-6. file_type - Language/framework (e.g., python, javascript, php)`,
+{additional_context}`
             ],
         ]);
     }
 
-
     async generatePatch(vulnerability: VulnerabilityInput, context?: any): Promise<PatchOutput> {
-
         const validatedInput = VulnerabilityInputSchema.parse(vulnerability);
-
 
         const evidenceSection = validatedInput.evidence
             ? `**Evidence:** ${validatedInput.evidence}`
             : "";
 
         const additionalParts: string[] = [];
-
 
         if (context) {
             const techStackParts: string[] = [];
@@ -112,12 +117,6 @@ Your response MUST include:
             : "";
 
         try {
-
-            const structuredLlm = this.llm.withStructuredOutput(PatchOutputSchema, {
-                name: "patch_recommendation",
-            });
-
-
             const formattedPrompt = await this.promptTemplate.formatMessages({
                 alert_name: validatedInput.alert_name,
                 risk_level: validatedInput.risk_level,
@@ -127,9 +126,13 @@ Your response MUST include:
                 additional_context: additionalContext,
             });
 
-
-            const result = await structuredLlm.invoke(formattedPrompt);
-
+            // Hand off the generation to the LLMProvider which supports Qwen -> Mistral fallback
+            const result = await this.llmProvider.invokeWithFallback(async (llm) => {
+                const structuredLlm = llm.withStructuredOutput(PatchOutputSchema, {
+                    name: "patch_recommendation",
+                });
+                return await structuredLlm.invoke(formattedPrompt);
+            });
 
             const processedResult = {
                 reasoning: result.reasoning || "Analysis based on the vulnerability description and available evidence.",
@@ -140,11 +143,8 @@ Your response MUST include:
                 file_type: result.file_type || "unknown"
             };
 
-
             return PatchOutputSchema.parse(processedResult);
-
         } catch (error) {
-
             if (error instanceof z.ZodError) {
                 const issues = error.issues as Array<{ message: string }>;
                 throw new PatchGenerationError(
@@ -152,7 +152,6 @@ Your response MUST include:
                     error
                 );
             }
-
 
             if (error instanceof Error) {
                 throw new PatchGenerationError(
@@ -165,37 +164,44 @@ Your response MUST include:
         }
     }
 
-
     async generatePatches(
         vulnerabilities: VulnerabilityInput[],
         context?: any,
         onProgress?: (current: number, total: number, name: string) => void
     ): Promise<Array<{ success: true; data: PatchOutput } | { success: false; error: string }>> {
-        const results: Array<{ success: true; data: PatchOutput } | { success: false; error: string }> = [];
+        let completed = 0;
 
-        for (let i = 0; i < vulnerabilities.length; i++) {
-            const vuln = vulnerabilities[i];
+        // Ensure LLM config is loaded in advance if it hasn't been already
+        await this.llmProvider.initialize();
 
-
-            if (onProgress) {
-                onProgress(i + 1, vulnerabilities.length, vuln.alert_name);
-            }
-
+        const promises = vulnerabilities.map(async (vuln, i) => {
             try {
                 const startTime = Date.now();
                 const data = await this.generatePatch(vuln, context);
                 const duration = ((Date.now() - startTime) / 1000).toFixed(1);
                 console.log(`[PatchGenerator] Patch ${i + 1}/${vulnerabilities.length} completed in ${duration}s: ${vuln.alert_name}`);
-                results.push({ success: true as const, data });
+                
+                if (onProgress) {
+                    completed++;
+                    onProgress(completed, vulnerabilities.length, vuln.alert_name);
+                }
+                
+                return { success: true as const, data };
             } catch (error) {
                 console.error(`[PatchGenerator] Patch ${i + 1}/${vulnerabilities.length} FAILED: ${vuln.alert_name}`);
-                results.push({
+                
+                if (onProgress) {
+                    completed++;
+                    onProgress(completed, vulnerabilities.length, vuln.alert_name);
+                }
+                
+                return {
                     success: false as const,
                     error: error instanceof Error ? error.message : "Unknown error",
-                });
+                };
             }
-        }
+        });
 
-        return results;
+        return Promise.all(promises);
     }
 }
