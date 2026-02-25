@@ -85,33 +85,6 @@ app.post("/generate-patches", async (req, res) => {
         logger.info(`[LangChain API] Generated ${successCount} patches successfully`);
 
 
-        console.log("\n" + "=".repeat(80));
-        console.log("AI-GENERATED PATCHES (LangChain Server)");
-        console.log("=".repeat(80));
-
-        let patchNum = 0;
-        for (const patchData of patches) {
-            if (patchData.success && 'patch' in patchData) {
-                patchNum++;
-                console.log(`\n[${patchNum}] ${patchData.vulnerability.alert_name}`);
-                console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
-                console.log("-".repeat(60));
-                console.log(`   REASONING:\n   ${patchData.patch.reasoning}`);
-                console.log(`\n   VULNERABLE CODE EXAMPLE:\n   ${patchData.patch.vulnerable_code_example}`);
-                console.log(`\n   ANALYSIS:\n   ${patchData.patch.analysis}`);
-                console.log(`\n   ROOT CAUSE:\n   ${patchData.patch.root_cause}`);
-                console.log(`\n   FILE TYPE: ${patchData.patch.file_type}`);
-                console.log(`\n   SUGGESTED FIX:\n   ${patchData.patch.suggested_fix}`);
-                console.log("-".repeat(60));
-            } else if (!patchData.success) {
-                console.log(`\nFAILED: ${patchData.vulnerability.alert_name}`);
-                console.log(`   Error: ${patchData.error}`);
-            }
-        }
-
-        console.log("\n" + "=".repeat(80));
-        console.log(`${successCount}/${patches.length} patches generated`);
-        console.log("=".repeat(80) + "\n");
 
         res.json({
             success: true,
@@ -167,10 +140,12 @@ app.post("/generate-patch", async (req, res) => {
 });
 
 
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
     logger.info(`[LangChain API] Server running on http://localhost:${PORT}`);
     console.log(`\nLangChain Patch Generator API`);
     console.log(`   Health: http://localhost:${PORT}/health`);
     console.log(`   Generate Patches: POST http://localhost:${PORT}/generate-patches`);
     console.log(`   Generate Single: POST http://localhost:${PORT}/generate-patch\n`);
 });
+
+server.setTimeout(1800000); // 30 minutes timeout
