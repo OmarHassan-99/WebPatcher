@@ -15,11 +15,12 @@ import LiveTimer from "./LiveTimer";
 import PipelineNode from "./PipelineNode";
 import ActiveStageDetails from "./ActiveStageDetails";
 import TerminalPanel from "./TerminalPanel";
+import { useEffect, useState } from "react";
 
 export default function ScanProgressPanel({
   scanJobId,
   initialStatus,
-  isLoadingResults,
+  onCompleteRedirect,
 }) {
   const {
     stage,
@@ -27,24 +28,36 @@ export default function ScanProgressPanel({
     message,
     patches,
     patchTotal,
+    isDone,
     isError,
     errorMessage,
   } = useScanProgress(scanJobId, initialStatus);
+
+  const [showLoadingOverride, setShowLoadingOverride] = useState(false);
+
+  useEffect(() => {
+    if (isDone && !isError) {
+      setShowLoadingOverride(true);
+      const timer = setTimeout(() => {
+        if (onCompleteRedirect) onCompleteRedirect();
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else setShowLoadingOverride(false);
+  }, [isDone, isError, onCompleteRedirect]);
 
   const lottie = GET_LOTTIE(stage, isError);
   const currentIdx = STAGE_ORDER[stage] ?? 0;
   const overallPct = Math.round(((currentIdx + 1) / STAGES.length) * 100);
   const activeStage =
     STAGES.find((s) => GET_STAGE_STATUS(s.key, stage) === "active") ?? null;
-  const showTerminal =
-    stage === "patching" || stage === "done" || patches.length > 0;
+  const showTerminal = stage === "patching" || patches.length > 0;
 
   return (
     <Motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-0"
+      className="relative w-full max-w-4xl mx-auto px-4 sm:px-0"
     >
       {/* Ambient glow */}
       <div className="absolute inset-0 -z-10 rounded-2xl blur-3xl bg-gradient-to-br from-violet-600/14 via-indigo-600/7 to-transparent" />
@@ -174,7 +187,7 @@ export default function ScanProgressPanel({
           <div className="flex-1 px-5 sm:px-7 py-5 sm:py-6 min-w-0">
             <AnimatePresence mode="wait">
               {/* ── Loading results transition ── */}
-              {isLoadingResults ? (
+              {showLoadingOverride ? (
                 <Motion.div
                   key="loading-results"
                   initial={{ opacity: 0, y: 6 }}

@@ -4,7 +4,13 @@ import { FEATURES } from "../../data/constants";
 
 export default function WhatWeOffer() {
   return (
-    <section className="py-16 mx-6">
+    <Motion.section
+      initial={{ opacity: 0, y: 50 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ amount: 0.2, once: true }}
+      transition={{ type: "spring", stiffness: 50 }}
+      className="py-16"
+    >
       <div className="mx-auto text-center">
         {/* Section Heading */}
         <h2 className="text-3xl sm:text-4xl font-bold text-primary-100 mb-4">
@@ -16,7 +22,7 @@ export default function WhatWeOffer() {
         </p>
 
         {/* Features */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mx-6">
           {FEATURES.map((f, i) => (
             <Motion.div
               initial={{ opacity: 0, y: 50 }}
@@ -42,6 +48,6 @@ export default function WhatWeOffer() {
           ))}
         </div>
       </div>
-    </section>
+    </Motion.section>
   );
 }

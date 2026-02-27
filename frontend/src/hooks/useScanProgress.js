@@ -2,17 +2,24 @@ import { useEffect, useRef, useState } from "react";
 import { getSocket, joinScanRoom, leaveScanRoom } from "../utils/socket";
 
 export function useScanProgress(scanJobId, initialStatus = "queued") {
+  const isAlreadyCompleted = initialStatus === "completed";
+
   const [state, setState] = useState({
-    stage: initialStatus === "running" ? "spider" : initialStatus,
-    percent: null,
-    message:
-      initialStatus === "queued"
+    stage: isAlreadyCompleted
+      ? "done"
+      : initialStatus === "running"
+        ? "spider"
+        : initialStatus,
+    percent: isAlreadyCompleted ? 100 : null,
+    message: isAlreadyCompleted
+      ? "Scan complete"
+      : initialStatus === "queued"
         ? "Waiting to start..."
         : "Syncing live progress...",
     patches: [],
     patchTotal: 0,
-    isDone: false,
-    isError: false,
+    isDone: isAlreadyCompleted,
+    isError: initialStatus === "failed",
     errorMessage: "",
   });
 
@@ -22,7 +29,6 @@ export function useScanProgress(scanJobId, initialStatus = "queued") {
     if (!scanJobId || scanJobId === "pending") return;
 
     patchesRef.current = [];
-
     const socket = getSocket();
 
     function join() {
@@ -30,7 +36,6 @@ export function useScanProgress(scanJobId, initialStatus = "queued") {
     }
 
     join();
-
     socket.on("connect", join);
 
     function onStage({ stage, message, total }) {
@@ -38,7 +43,6 @@ export function useScanProgress(scanJobId, initialStatus = "queued") {
         ...prev,
         stage,
         message: message || prev.message,
-        // reset percent when entering a new top-level stage
         percent: null,
         patchTotal: total ?? prev.patchTotal,
         isDone: false,
