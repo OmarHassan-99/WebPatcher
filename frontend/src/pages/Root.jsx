@@ -52,6 +52,9 @@ export default function RootPage() {
     }
 
     function onComplete(data) {
+      queryClient.invalidateQueries({ queryKey: ["scans"] });
+      queryClient.invalidateQueries({ queryKey: ["scans", data.scanJobId] });
+
       const isViewingCurrentScan =
         locationRef.current === `/targets/${data.scanJobId}` ||
         locationRef.current === "/targets/new";
@@ -149,7 +152,9 @@ export default function RootPage() {
           />
         )}
       </div>
-      <main className="flex flex-1 flex-col">
+      <main
+        className={`flex flex-1 flex-col ${location.pathname === "/" ? "pb-0" : "pb-20"}`}
+      >
         <MainNavigation />
         <Outlet />
       </main>

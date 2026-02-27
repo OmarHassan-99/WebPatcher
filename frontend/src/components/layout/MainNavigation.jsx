@@ -28,6 +28,7 @@ export default function MainNavigation() {
       console.error(error);
       if (error.response) {
         toast.error(error.response.data?.message || "Logout failed");
+        return;
       }
       toast.error("Logout failed: " + error.message);
     },

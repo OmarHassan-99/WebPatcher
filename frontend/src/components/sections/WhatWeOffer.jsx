@@ -1,12 +1,8 @@
 import Lottie from "lottie-react";
-import { Link, useRouteLoaderData } from "react-router-dom";
 import { motion as Motion } from "motion/react";
 import { FEATURES } from "../../data/constants";
 
 export default function WhatWeOffer() {
-  const session = useRouteLoaderData("root");
-  const { user } = session;
-
   return (
     <section className="py-16 mx-6">
       <div className="mx-auto text-center">
@@ -25,7 +21,7 @@ export default function WhatWeOffer() {
             <Motion.div
               initial={{ opacity: 0, y: 50 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ amount: 0.4, once: true }}
+              viewport={{ amount: 0.2, once: true }}
               whileHover={{
                 scale: 1.02,
                 rotate: 1,
@@ -44,21 +40,6 @@ export default function WhatWeOffer() {
               <p className="text-primary-100 mt-2">{f.desc}</p>
             </Motion.div>
           ))}
-        </div>
-
-        {/* CTA Section */}
-        <div className="mt-16 flex flex-col items-center">
-          <Link
-            to={user ? "/targets" : "/auth?mode=login"}
-            className="flex items-center px-8 py-4 text-lg font-semibold rounded-2xl shadow-md bg-primary-400 hover:bg-primary-300 text-white transition-colors duration-500"
-          >
-            <p>
-              🚀 Get Started with <span className="italic">WebPatcher</span>
-            </p>
-          </Link>
-          <p className="mt-3 text-sm text-primary-200">
-            Secure your web apps faster, smarter, and safer.
-          </p>
         </div>
       </div>
     </section>

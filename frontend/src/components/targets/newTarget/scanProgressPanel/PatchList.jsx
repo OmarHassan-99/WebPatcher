@@ -1,4 +1,5 @@
 import { motion as Motion, AnimatePresence } from "framer-motion";
+import { CheckCircle, XCircle } from "lucide-react";
 import { RISK_COLORS_SCAN } from "../../../../data/constants";
 
 export default function PatchList({ patches, patchTotal }) {

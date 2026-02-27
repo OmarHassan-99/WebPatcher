@@ -48,6 +48,32 @@
   .glass-card {
     @apply backdrop-blur-md bg-surface-900/60 border border-white/5 shadow-lg;
   }
+
+  .hero-gradient-text {
+    background: linear-gradient(270deg,
+        #c77dff,
+        #e879f9,
+        #818cf8,
+        #22d3ee,
+        #c77dff);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradient-shift 6s ease infinite;
+  }
+}
+
+@keyframes gradient-shift {
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 /* Scrollbar Styling */
