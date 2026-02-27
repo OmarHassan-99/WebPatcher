@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { AnimatePresence, motion as Motion } from "framer-motion";
 import Lottie from "lottie-react";
 import { AlertTriangle, ArrowLeft } from "lucide-react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import useCsrf from "../hooks/useCsrf";
 import { getFindings } from "../utils/http/zap";
@@ -16,17 +16,14 @@ import RecommendationsPanel from "../components/targetDetails/recommendations/Re
 import TabSwitcher from "../components/targetDetails/TabSwitcher";
 import ScanProgressPanel from "../components/targets/newTarget/scanProgressPanel/ScanProgressPanel";
 
-export default function TargetDetailsPage({
-  fromNewTargetPage,
-  scanResult,
-  scanId,
-}) {
-  const { targetId: targetIdParam } = useParams();
+export default function TargetDetailsPage() {
+  const { targetId } = useParams();
+  const { state } = useLocation();
+  const fromNewTarget = state?.fromNewTarget ?? false;
+  const isLoadingResults = state?.isLoadingResults ?? false;
   const csrfToken = useCsrf();
   const [activeTab, setActiveTab] = useState("vulnerabilities");
   const [recsCount, setRecsCount] = useState(null);
-
-  const targetId = targetIdParam ?? scanId;
 
   const handleCountReady = useCallback((n) => setRecsCount(n), []);
 
@@ -38,20 +35,34 @@ export default function TargetDetailsPage({
   });
 
   const status = data?.status;
-  const findings = data?.findings || scanResult || [];
+  const findings = data?.findings || [];
 
   return (
     <div className="text-white flex justify-center items-center">
       <AnimatePresence mode="wait">
-        {/* 1. LOADING (Initial Fetch) */}
-        {isPending && !fromNewTargetPage && (
-          <StageView
-            key="loading"
-            animation={loadingLottieAnimation}
-            text="Retrieving historical data..."
-            extraMargin
-          />
-        )}
+        {/* 1. LOADING / LIVE SCAN */}
+        {isPending &&
+          (fromNewTarget ? (
+            <Motion.div
+              key="live-scan"
+              variants={FADE_VARIANTS}
+              initial="hidden"
+              animate="visible"
+              className="flex justify-center py-12"
+            >
+              <ScanProgressPanel
+                scanJobId={targetId}
+                isLoadingResults={isLoadingResults}
+              />
+            </Motion.div>
+          ) : (
+            <StageView
+              key="loading"
+              animation={loadingLottieAnimation}
+              text="Retrieving historical data..."
+              extraMargin
+            />
+          ))}
 
         {/* 2. ERROR STATE */}
         {error && (
@@ -119,14 +130,14 @@ export default function TargetDetailsPage({
         )}
 
         {/* 5. COMPLETED STATE */}
-        {((status === "completed" && !isPending) || fromNewTargetPage) && (
+        {status === "completed" && !isPending && (
           <Motion.div
             key="completed"
             variants={FADE_VARIANTS}
             initial="hidden"
             animate="visible"
             exit="exit"
-            className={`flex flex-col w-full ${!fromNewTargetPage && "mt-8"}`}
+            className="flex flex-col w-full mt-8"
           >
             <div className="flex flex-col items-center">
               <Lottie

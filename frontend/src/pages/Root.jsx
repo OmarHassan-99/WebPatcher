@@ -43,18 +43,17 @@ export default function RootPage() {
     socket.on("connect", joinRoom);
 
     function onCreated() {
-      queryClient.invalidateQueries({ queryKey: ["scans"] });
+      queryClient.resetQueries({ queryKey: ["scans"] });
     }
 
     function onStatus(data) {
       queryClient.invalidateQueries({ queryKey: ["scans"] });
       queryClient.invalidateQueries({ queryKey: ["scans", data.scanJobId] });
+
+      if (data.status === "completed") onComplete(data);
     }
 
     function onComplete(data) {
-      queryClient.invalidateQueries({ queryKey: ["scans"] });
-      queryClient.invalidateQueries({ queryKey: ["scans", data.scanJobId] });
-
       const isViewingCurrentScan =
         locationRef.current === `/targets/${data.scanJobId}` ||
         locationRef.current === "/targets/new";
@@ -121,14 +120,12 @@ export default function RootPage() {
 
     socket.on("scan:created", onCreated);
     socket.on("scan:status", onStatus);
-    socket.on("scan:complete", onComplete);
     socket.on("scan:error", onError);
 
     return () => {
       socket.off("connect", joinRoom);
       socket.off("scan:created", onCreated);
       socket.off("scan:status", onStatus);
-      socket.off("scan:complete", onComplete);
       socket.off("scan:error", onError);
 
       leaveUserRoom(user._id);

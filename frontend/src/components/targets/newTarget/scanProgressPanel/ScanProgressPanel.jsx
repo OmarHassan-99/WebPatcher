@@ -14,6 +14,7 @@ import Shimmer from "./Shimmer";
 import LiveTimer from "./LiveTimer";
 import PipelineNode from "./PipelineNode";
 import ActiveStageDetails from "./ActiveStageDetails";
+import TerminalPanel from "./TerminalPanel";
 
 export default function ScanProgressPanel({
   scanJobId,
@@ -35,13 +36,15 @@ export default function ScanProgressPanel({
   const overallPct = Math.round(((currentIdx + 1) / STAGES.length) * 100);
   const activeStage =
     STAGES.find((s) => GET_STAGE_STATUS(s.key, stage) === "active") ?? null;
+  const showTerminal =
+    stage === "patching" || stage === "done" || patches.length > 0;
 
   return (
     <Motion.div
       initial={{ opacity: 0, y: 18 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
-      className="relative w-full max-w-4xl mx-auto px-4 sm:px-0"
+      className="relative w-full max-w-4xl lg:max-w-6xl mx-auto px-4 sm:px-0"
     >
       {/* Ambient glow */}
       <div className="absolute inset-0 -z-10 rounded-2xl blur-3xl bg-gradient-to-br from-violet-600/14 via-indigo-600/7 to-transparent" />
@@ -236,6 +239,18 @@ export default function ScanProgressPanel({
               )}
             </AnimatePresence>
           </div>
+
+          {/* Right col: Terminal panel (lg+ only) */}
+          <AnimatePresence mode="popLayout">
+            {showTerminal && (
+              <TerminalPanel
+                key={stage}
+                patches={patches}
+                patchTotal={patchTotal}
+                stage={stage}
+              />
+            )}
+          </AnimatePresence>
         </div>
 
         {/* ══ Footer ══ */}
@@ -244,7 +259,8 @@ export default function ScanProgressPanel({
           <span className="text-[10px] text-white/15 font-mono tracking-wider shrink-0">
             ID · {scanJobId?.slice(-8)?.toUpperCase() ?? "——"}
           </span>
-          <span className="text-[10px] text-white/20 text-right">
+          <span className="flex items-center gap-2 text-[10px] text-white/20 text-right">
+            <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             You can leave — scan runs in the background
           </span>
         </div>

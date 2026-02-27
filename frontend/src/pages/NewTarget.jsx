@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import Stepper, { Step } from "../react-bits/Stepper";
@@ -12,7 +13,6 @@ import { useScanProgress } from "../hooks/useScanProgress";
 import TargetAndRepoURLs from "../components/targets/newTarget/Target&RepoURLs";
 import AiContext from "../components/targets/newTarget/AiContext";
 import ScanProgressPanel from "../components/targets/newTarget/scanProgressPanel/ScanProgressPanel";
-import TargetDetailsPage from "./TargetDetails";
 
 const GITHUB_INSTALL_URL =
   "https://github.com/apps/webpatcher-ai-powered-assistant/installations/new";
@@ -28,11 +28,41 @@ export default function NewTargetPage() {
   const [error, setError] = useState({ targetUrl: "", githubRepoUrl: "" });
   const [isAnimatePulse, setIsAnimatePulse] = useState(true);
   const [activeScanJobId, setActiveScanJobId] = useState(null);
+  const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false);
+
+  const { isDone } = useScanProgress(activeScanJobId);
+
+  const navigate = useNavigate();
 
   const csrfToken = useCsrf();
 
+  // Fetch findings once the WS signals the scan is fully done
+  const { data: findings } = useQuery({
+    queryKey: ["scans", activeScanJobId],
+    queryFn: () => getFindings({ csrfToken, scanId: activeScanJobId }),
+    enabled: !!activeScanJobId && isDone,
+    retry: false,
+  });
+
   const { mutateAsync: validateMutate, isPending: isPendingValidation } =
     useMutation({ mutationFn: validateTargetAndRepoURLs });
+  const { mutate: startScanMutate } = useMutation({ mutationFn: startZapScan });
+
+  const isShowingResults =
+    isDone && findings !== undefined && minLoadingTimeElapsed;
+
+  const isLoadingResults = isDone && !isShowingResults;
+
+  useEffect(() => {
+    if (isDone) {
+      const timer = setTimeout(() => {
+        setMinLoadingTimeElapsed(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    } else {
+      setMinLoadingTimeElapsed(false); // Reset if a new scan starts
+    }
+  }, [isDone]);
 
   async function handleUrlsValidation() {
     setError({ targetUrl: "", githubRepoUrl: "" });
@@ -75,36 +105,6 @@ export default function NewTargetPage() {
     }
   }
 
-  const { mutate: startScanMutate } = useMutation({ mutationFn: startZapScan });
-
-  const progress = useScanProgress(activeScanJobId);
-
-  const [minLoadingTimeElapsed, setMinLoadingTimeElapsed] = useState(false);
-
-  useEffect(() => {
-    if (progress.isDone) {
-      const timer = setTimeout(() => {
-        setMinLoadingTimeElapsed(true);
-      }, 5000);
-      return () => clearTimeout(timer);
-    } else {
-      setMinLoadingTimeElapsed(false); // Reset if a new scan starts
-    }
-  }, [progress.isDone]);
-
-  // Fetch findings once the WS signals the scan is fully done
-  const { data: findings } = useQuery({
-    queryKey: ["scans", activeScanJobId],
-    queryFn: () => getFindings({ csrfToken, scanId: activeScanJobId }),
-    enabled: !!activeScanJobId && progress.isDone,
-    retry: false,
-  });
-
-  const isShowingResults =
-    progress.isDone && findings !== undefined && minLoadingTimeElapsed;
-
-  const isLoadingResults = progress.isDone && !isShowingResults;
-
   function handleStartScan() {
     startScanMutate(
       {
@@ -117,6 +117,10 @@ export default function NewTargetPage() {
       {
         onSuccess: (data) => {
           setActiveScanJobId(data.scanJobId);
+          navigate(`/targets/${data.scanJobId}`, {
+            replace: true,
+            state: { fromNewTarget: true, isLoadingResults },
+          });
         },
         onError: (err) => {
           console.error("Scan failed:", err);
@@ -180,22 +184,18 @@ export default function NewTargetPage() {
         </Step>
       </Stepper>
 
-      {activeScanJobId !== null && !isShowingResults && (
+      {/* {activeScanJobId !== null && !isShowingResults && (
         <div className="flex justify-center py-6">
           <ScanProgressPanel
             scanJobId={activeScanJobId}
             isLoadingResults={isLoadingResults}
           />
         </div>
-      )}
+      )} */}
 
-      {isShowingResults && (
-        <TargetDetailsPage
-          fromNewTargetPage={true}
-          scanResult={findings?.findings ?? []}
-          scanId={activeScanJobId}
-        />
-      )}
+      {/* {isShowingResults && (
+        <Navigate to={`/targets/${activeScanJobId}`} replace />
+      )} */}
     </div>
   );
 }
