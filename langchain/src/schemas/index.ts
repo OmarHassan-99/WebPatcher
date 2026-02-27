@@ -49,6 +49,22 @@ export const PatchOutputSchema = z.object({
 });
 
 
+export const BatchPatchItemSchema = z.object({
+    alert_name: z.string().describe("The exact alert name this patch corresponds to"),
+    reasoning: PatchOutputSchema.shape.reasoning,
+    vulnerable_code_example: PatchOutputSchema.shape.vulnerable_code_example,
+    analysis: PatchOutputSchema.shape.analysis,
+    root_cause: PatchOutputSchema.shape.root_cause,
+    suggested_fix: PatchOutputSchema.shape.suggested_fix,
+    file_type: PatchOutputSchema.shape.file_type,
+});
+
+
+export const BatchPatchOutputSchema = z.object({
+    patches: z.array(BatchPatchItemSchema).describe("Array of patch recommendations, one for each vulnerability provided"),
+});
+
+
 export const ZapInstanceSchema = z.object({
     uri: z.string().optional().default(""),
     method: z.string().optional().default(""),

@@ -1,5 +1,8 @@
 import express from "express";
 import cors from "cors";
+import * as dotenv from "dotenv";
+
+dotenv.config();
 import { PatchGenerator } from "./services/PatchGenerator";
 import { ZapFindingAdapter } from "./adapters/ZapFindingAdapter";
 import { logger } from "../logging/logger";
