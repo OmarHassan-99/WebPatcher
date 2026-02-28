@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { logout } from "../../utils/http/userAuth";
 import toast from "react-hot-toast";
 import useCsrf from "../../hooks/useCsrf";
+import { disconnectSocket } from "../../utils/socket";
 
 export default function MainNavigation() {
   const [isOpen, setIsOpen] = useState(false);
@@ -27,6 +28,7 @@ export default function MainNavigation() {
       console.error(error);
       if (error.response) {
         toast.error(error.response.data?.message || "Logout failed");
+        return;
       }
       toast.error("Logout failed: " + error.message);
     },
@@ -65,7 +67,13 @@ export default function MainNavigation() {
             />
           </>
         ) : (
-          <CustomLink title="Logout" onClick={() => handleLogout()} />
+          <CustomLink
+            title="Logout"
+            onClick={() => {
+              disconnectSocket();
+              handleLogout();
+            }}
+          />
         )}
       </div>
 

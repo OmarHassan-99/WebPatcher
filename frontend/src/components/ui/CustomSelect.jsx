@@ -30,7 +30,7 @@ export default function CustomSelect({ value, onChange, options }) {
         className={`
           flex items-center justify-between w-full
           px-4 py-2.5 rounded-xl
-          bg-surface-800/50 backdrop-blur-sm
+          bg-transparent backdrop-blur-sm
           border border-white/10 hover:border-primary-500/50
           text-sm font-medium text-gray-200
           transition-all duration-300

@@ -101,7 +101,7 @@ export default function TargetsPage() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
             transition={{ type: "spring", stiffness: 50, delay: 0.1 }}
-            className="relative z-20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-900/40 backdrop-blur-md p-6 rounded-3xl border border-white/5"
+            className="relative z-20 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-transparent backdrop-blur-md p-6 rounded-3xl border border-white/8"
           >
             {/* Header Content Switches based on Selection */}
             {selectedIds.size > 0 ? (

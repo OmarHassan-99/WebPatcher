@@ -6,9 +6,9 @@ export default function Footer() {
 
   return (
     <Motion.footer
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: -20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ amount: 0.4, once: true }}
+      viewport={{ amount: 0.2, once: true }}
       transition={{ type: "spring", stiffness: 50 }}
       className="w-full border-t border-primary-700 px-5 py-7 text-primary-200"
     >

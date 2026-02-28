@@ -1,6 +1,6 @@
 import "dotenv/config.js";
 import axios from "axios";
-``
+
 const LANGCHAIN_API_URL = process.env.LANGCHAIN_API_URL;
 
 /**
@@ -29,7 +29,7 @@ export async function generatePatchesForFindings(
         context,
       },
       {
-        timeout: 600000, // 10 minutes timeout
+        timeout: 1800000, // 30 minutes timeout
         headers: {
           "Content-Type": "application/json",
         },
@@ -67,7 +67,7 @@ export async function generatePatchForFinding(finding) {
       `${LANGCHAIN_API_URL}/generate-patch`,
       finding,
       {
-        timeout: 300000, // 5 minutes timeout
+        timeout: 900000, // 15 minutes timeout
         headers: {
           "Content-Type": "application/json",
         },

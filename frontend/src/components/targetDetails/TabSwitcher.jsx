@@ -1,11 +1,16 @@
 import { motion as Motion } from "framer-motion";
 import { TABS } from "../../data/constants";
 
-export default function TabSwitcher({ activeTab, setActiveTab, recsCount }) {
+export default function TabSwitcher({
+  activeTab,
+  setActiveTab,
+  vulnsCount,
+  recsCount,
+}) {
   return TABS.map(({ id, label, icon }) => {
     const TabIcon = icon;
     const isActive = activeTab === id;
-    const count = id === "recommendations" ? recsCount : null;
+    const count = id === "recommendations" ? recsCount : vulnsCount;
     return (
       <button
         key={id}

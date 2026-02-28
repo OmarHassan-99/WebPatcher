@@ -1,11 +1,13 @@
 import express from "express";
 import cors from "cors";
+import http from "http";
 import MongoStore from "connect-mongo";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import { doubleCsrf } from "csrf-csrf";
 import connectDB from "./config/db.js";
 import { resetStalledScans } from "./services/cleanupService.js";
+import { initSocketIO } from "./services/socketService.js";
 
 import userRouter from "./routes/userRoute.js";
 import scanRouter from "./routes/scanRoutes.js";
@@ -20,6 +22,12 @@ const CSRF_SECRET_KEY = process.env.CSRF_SECRET_KEY;
 const PORT = process.env.PORT;
 
 const app = express();
+
+// Wrap Express in a plain http.Server so Socket.io can share the same port
+const httpServer = http.createServer(app);
+
+// Attach Socket.io — must happen before routes so io is ready for scan events
+initSocketIO(httpServer, FRONT_END_ORIGIN);
 
 app.use(express.json());
 
@@ -62,10 +70,10 @@ app.get("/api/csrf-token", (req, res) => {
   res.json({ csrfToken });
 });
 
+app.use(doubleCsrfProtection);
 app.use("/auth", userRouter);
 app.use("/api/scans", scanRouter);
 app.use("/api/recommendations", recommendationRouter);
-app.use(doubleCsrfProtection);
 
 app.use((err, req, res, next) => {
   if (err === invalidCsrfTokenError) {
@@ -78,4 +86,4 @@ app.use((err, req, res, next) => {
 
 await resetStalledScans();
 
-app.listen(PORT, () => console.log("Server started on port " + PORT));
+httpServer.listen(PORT, () => console.log("Server started on port " + PORT));
