@@ -13,9 +13,10 @@ import {
 } from "../services/patchService.js";
 import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
-import mappingService from '../services/mappingService.js';
-
 import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
+
+import mappingService from '../services/mappingService.js';
+import RepoDownloader from '../services/githubService.js';
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -75,25 +76,42 @@ export async function startZapScan(req, res) {
     res.status(202).json({ scanJobId: scan._id.toString() });
 
     broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
+    runScanInBackground(url, scan._id, userId);
+  } catch (error) {
+    console.error("[ScanController] Failed to create scan job:", error);
+    res.status(500).json({ message: "Failed to start scan" });
+  }
+}
 
-    const extractedReport = await extractZapReport(report, scan._id);
+async function runScanInBackground(url, scanJobId, userId) {
+  try {
+    const { report } = await runZapScanService(url, scanJobId, userId);
 
-    console.log("[ScanController] Scan complete. Sending report to user");
+    const extractedReport = await extractZapReport(report, scanJobId);
 
-    // Send response immediately so user sees results
-    res.status(200).json(extractedReport);
+
 
 
     console.log("===================================================================\n");
+
+    console.log(JSON.stringify(extractedReport, null, 2));
     try {
       //Sent report to mapping to map files
       console.log("\nStep 2: Parsing ZAP Report...");
       const alerts = extractedReport;
+
+
+      const repoPath = await RepoDownloader.downloadSourceCode(githubRepoUrl, 'user_1');
+      console.log(`✅ Repo cloned to: ${repoPath}`);
+
+
       const targetAlert = alerts.find(a => a.type === 'SQL Injection');
       console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
+      //cloning repo
+
       // mapping
       console.log("\nStep 3: Mapping URL to Source Code...");
-      const location = await mappingService.mapAlertToCode(projectPath, targetAlert);
+      const location = await mappingService.mapAlertToCode(repoPath, targetAlert);
       if (location) {
         console.log("-----------------------------------------");
         console.log(`🎯 MATCH FOUND!`);
@@ -114,21 +132,7 @@ export async function startZapScan(req, res) {
 
 
 
-    // Generate patches in background (don't await - runs after response)
-    console.log("[ScanController] Starting patch generation in background...");
-    generatePatchesInBackground(extractedReport, scanJobId);
-    runScanInBackground(url, scan._id, userId);
-  } catch (error) {
-    console.error("[ScanController] Failed to create scan job:", error);
-    res.status(500).json({ message: "Failed to start scan" });
-  }
-}
 
-async function runScanInBackground(url, scanJobId, userId) {
-  try {
-    const { report } = await runZapScanService(url, scanJobId, userId);
-
-    const extractedReport = await extractZapReport(report, scanJobId);
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
     generatePatchesInBackground(extractedReport, scanJobId, userId);
