@@ -13,6 +13,8 @@ import {
 } from "../services/patchService.js";
 import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
+import mappingService from '../services/mappingService.js';
+
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -82,6 +84,37 @@ export async function startZapScan(req, res) {
 
     // Send response immediately so user sees results
     res.status(200).json(extractedReport);
+
+
+    console.log("===================================================================\n");
+    try {
+      //Sent report to mapping to map files
+      console.log("\nStep 2: Parsing ZAP Report...");
+      const alerts = extractedReport;
+      const targetAlert = alerts.find(a => a.type === 'SQL Injection');
+      console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
+      // mapping
+      console.log("\nStep 3: Mapping URL to Source Code...");
+      const location = await mappingService.mapAlertToCode(projectPath, targetAlert);
+      if (location) {
+        console.log("-----------------------------------------");
+        console.log(`🎯 MATCH FOUND!`);
+        console.log(`📄 File: ${location.filePath}`);
+        console.log(`📍 Line: ${location.line}`);
+        console.log(`💻 Code: ${location.snippet}`);
+        console.log("-----------------------------------------");
+
+      } else {
+        console.error("❌ Failed to map the vulnerability to code.");
+      }
+
+    }
+    catch (error) {
+      console.error("💥 Master Test Failed:", error.message);
+    }
+    console.log("===================================================================\n");
+
+
 
     // Generate patches in background (don't await - runs after response)
     console.log("[ScanController] Starting patch generation in background...");
