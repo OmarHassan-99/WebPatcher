@@ -187,6 +187,24 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
       `[ScanController] Generating patches for ${findings.length} finding(s)...`,
     );
 
+    if (!findings || findings.length === 0) {
+      console.log("[ScanController] No findings to patch — skipping LangChain API call.");
+      await ScanJob.findByIdAndUpdate(scanJobId, {
+        $set: { status: "completed", finishedAt: Date.now() },
+      });
+      broadcastToUser(userId, "scan:status", {
+        scanJobId: scanJobId.toString(),
+        status: "completed",
+      });
+      emitScanEvent(scanJobId, "scan:complete", {
+        stage: "done",
+        successCount: 0,
+        total: 0,
+        message: "Scan complete — no findings to patch",
+      });
+      return;
+    }
+
     await ScanJob.findByIdAndUpdate(scanJobId, {
       $set: { status: "patching" },
     });
