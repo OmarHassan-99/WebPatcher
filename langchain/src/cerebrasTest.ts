@@ -20,14 +20,14 @@ async function runCerebrasTest() {
 
         // 2. بيانات ثغرة لاختبار قدرة الموديل على كتابة الكود
         const mockVuln = {
-            alert_name: "Path Traversal",
-            risk_level: "High",
-            affected_url: "http://localhost:3000/api/download",
-            description: "An attacker can use ../ sequences to read arbitrary files from the server.",
-            evidence: "res.sendFile('/var/www/uploads/' + req.query.filename)",
-            method: "GET",
-            parameter: "filename",
-            cwe_id: 22
+                alert_name: "SQL Injection",
+                risk_level: "High",
+                affected_url: "http://localhost:3000/api/users/login",
+                description: "User input is directly concatenated into a SQL query string.",
+                evidence: "SELECT * FROM admins WHERE user = '\" + req.body.user + \"'",
+                method: "POST",
+                parameter: "user",
+                cwe_id: 89     
         };
 
         const context = {
