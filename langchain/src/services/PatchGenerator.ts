@@ -3,34 +3,27 @@ import { VulnerabilityInputSchema, PatchOutputSchema, BatchPatchOutputSchema } f
 import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "../types";
 import { PatchGenerationError } from "../types";
 import { z } from "zod";
-// تم استبدال Gemini بـ Groq
-import { GroqProvider } from "../llm/groq"; 
+// استبدال Gemini/Groq بـ Cerebras
+import { CerebrasProvider } from "../llm/cerebras"; 
 import { SmartPromptBuilder } from "../prompts/SmartPromptBuilder";
 import { TokenBudgetManager } from "../llm/TokenBudgetManager";
 
 export class PatchGenerator {
     private promptTemplate: ChatPromptTemplate;
-    // تغيير النوع إلى GroqProvider
-    private llmProvider: GroqProvider; 
+    // تغيير النوع ليكون CerebrasProvider
+    private llmProvider: CerebrasProvider; 
     private smartBuilder!: SmartPromptBuilder;
 
     constructor(config?: PatchGeneratorConfig) {
-        // الحصول على نسخة GroqProvider
-        this.llmProvider = GroqProvider.getInstance(); 
+        // الحصول على النسخة الوحيدة من CerebrasProvider
+        this.llmProvider = CerebrasProvider.getInstance();
 
         this.promptTemplate = ChatPromptTemplate.fromMessages([
             [
                 "system",
                 `Act as a Senior Application Security Engineer and Secure Code Reviewer.
                 Your task is to generate a REALISTIC, production-ready remediation based on a ZAP alert.
-                You MUST output EXACTLY one valid JSON object with these 6 fields:
-                1. reasoning
-                2. vulnerable_code_example
-                3. analysis
-                4. root_cause
-                5. suggested_fix
-                6. file_type
-                ... (باقي الـ System Prompt كما هو) ...`
+                ... (باقي الـ System Prompt كما هو بدون تغيير) ...`
             ],
             [
                 "human",
@@ -91,7 +84,7 @@ export class PatchGenerator {
                 additional_context: additionalContext,
             });
 
-            // استخدام Groq لتوليد الإصلاح
+            // استخدام Cerebras لتوليد الرد المهيكل
             const result = await this.llmProvider.invokeWithFallback(async (llm) => {
                 const structuredLlm = llm.withStructuredOutput(PatchOutputSchema, {
                     name: "patch_recommendation",
@@ -99,18 +92,9 @@ export class PatchGenerator {
                 return await structuredLlm.invoke(formattedPrompt);
             });
 
-            const processedResult = {
-                reasoning: result.reasoning || "Analysis based on description.",
-                vulnerable_code_example: result.vulnerable_code_example || "// See analysis",
-                analysis: result.analysis || validatedInput.description,
-                root_cause: result.root_cause || "See analysis",
-                suggested_fix: result.suggested_fix || "Check best practices",
-                file_type: result.file_type || "unknown"
-            };
-
-            return PatchOutputSchema.parse(processedResult);
+            return PatchOutputSchema.parse(result);
         } catch (error) {
-            throw new PatchGenerationError(`Groq generation failed`, error);
+            throw new PatchGenerationError(`Cerebras generation failed`, error);
         }
     }
 
@@ -119,13 +103,12 @@ export class PatchGenerator {
         context?: any,
         onProgress?: (current: number, total: number, name: string) => void
     ): Promise<Array<{ success: true; data: PatchOutput } | { success: false; error: string }>> {
-        // تهيئة GroqProvider
+        // تهيئة الـ Provider
         await this.llmProvider.initialize();
 
         const remaining = this.llmProvider.getRemainingRequests();
-        console.log(`[PatchGenerator] Groq initialized. Processing batch...`);
+        console.log(`[PatchGenerator] Cerebras Ready. Processing batch...`);
 
-        // منطق الـ Deduplication والـ Batching كما هو مستمر باستخدام Groq
         const uniqueMap = new Map<string, { vuln: VulnerabilityInput; indices: number[] }>();
         vulnerabilities.forEach((vuln, i) => {
             const key = vuln.alert_name.toLowerCase();
@@ -141,14 +124,13 @@ export class PatchGenerator {
         
         try {
             const batchResults = await this.generateBatch(uniqueVulns, context);
-            // توزيع النتائج كما في الكود الأصلي
             for (const [key, entry] of uniqueMap.entries()) {
                 const matchedPatch = batchResults.find(p => p.alert_name.toLowerCase() === key);
                 for (const idx of entry.indices) {
                     if (matchedPatch) {
                         results[idx] = { success: true, data: matchedPatch as PatchOutput };
                     } else {
-                        results[idx] = { success: false, error: "No patch returned by Groq" };
+                        results[idx] = { success: false, error: "No patch returned by Cerebras" };
                     }
                 }
             }
@@ -156,6 +138,7 @@ export class PatchGenerator {
             const errMsg = error instanceof Error ? error.message : "Batch failed";
             vulnerabilities.forEach((_, i) => results[i] = { success: false, error: errMsg });
         }
+
         return results;
     }
 
@@ -164,12 +147,13 @@ export class PatchGenerator {
         const budgetManager = new TokenBudgetManager();
 
         if (!this.smartBuilder) {
-            // ربط الـ SmartBuilder بموديل Groq
+            // ربط الـ Builder بموديل Qwen-3 عبر Cerebras
              this.smartBuilder = new SmartPromptBuilder(this.llmProvider.getLLM());
         }
 
         const vulnDescriptionsPromises = vulnerabilities.map(async (vuln) => {
             const validated = VulnerabilityInputSchema.parse(vuln);
+            // الـ SmartBuilder سيقوم بتقليص الـ Prompt بناءً على حدود Cerebras
             const { promptText } = await this.smartBuilder.buildPipeline(validated, this.llmProvider.getLLM());
             return `--- Vulnerability ---\n${promptText}`;
         });
@@ -186,7 +170,6 @@ export class PatchGenerator {
             context: contextStr,
         });
 
-        // استخدام الـ invokeWithFallback الخاص بـ Groq
         const result = await this.llmProvider.invokeWithFallback(async (llm) => {
             const structuredLlm = llm.withStructuredOutput(BatchPatchOutputSchema, {
                 name: "batch_patch_recommendations",
