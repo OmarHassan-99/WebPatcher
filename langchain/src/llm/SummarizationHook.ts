@@ -1,10 +1,11 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 
 export class SummarizationHook {
-    private llm: ChatGoogleGenerativeAI;
+    // تم تغيير النوع لدعم أي LLM (مثل Groq)
+    private llm: BaseChatModel;
 
-    constructor(llm: ChatGoogleGenerativeAI) {
+    constructor(llm: BaseChatModel) {
         this.llm = llm;
     }
 
@@ -18,12 +19,10 @@ export class SummarizationHook {
 
         try {
             const formatted = await prompt.formatMessages({ text });
-            // Using raw invoke for fast compression
             const res = await this.llm.invoke(formatted);
             return res.content.toString();
         } catch (error) {
             console.error("[SummarizationHook] Failed to summarize text. Returning truncated string.", error);
-            // Absolute fallback string truncation if the fast LLM call fails
             return text.substring(0, 500) + "... [Truncated]";
         }
     }

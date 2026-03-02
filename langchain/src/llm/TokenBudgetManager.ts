@@ -1,4 +1,4 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { BaseChatModel } from "@langchain/core/language_models/chat_models";
 import { LLMConfig, defaultConfig } from "../config/llm.config";
 
 export class TokenBudgetManager {
@@ -14,17 +14,19 @@ export class TokenBudgetManager {
         return { maxInputAllowed: Math.floor(absoluteMax - margin) };
     }
 
-    public async calculateTokens(model: ChatGoogleGenerativeAI, text: string): Promise<number> {
+    // تقبل الآن أي موديل يحقق واجهة BaseChatModel
+    public async calculateTokens(model: BaseChatModel, text: string): Promise<number> {
         try {
+            // ملاحظة: Groq/Llama3 قد لا تدعم getNumTokens برمجياً في بعض نسخ LangChain 
+            // لذا الـ fallback هنا مهم جداً
             return await model.getNumTokens(text);
         } catch (error) {
             console.warn("[TokenBudgetManager] Failed to calculate tokens natively. Using fallback estimate.", error);
-            // Fallback rule of thumb: 1 token ~= 4 characters in English
-            return Math.ceil(text.length / 4);
+            return Math.ceil(text.length / 4); // 1 token ~= 4 chars
         }
     }
 
-    public async needsReduction(model: ChatGoogleGenerativeAI, text: string): Promise<boolean> {
+    public async needsReduction(model: BaseChatModel, text: string): Promise<boolean> {
         const tokens = await this.calculateTokens(model, text);
         return tokens > this.getBudget().maxInputAllowed;
     }
