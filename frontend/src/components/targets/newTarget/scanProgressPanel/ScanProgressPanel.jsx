@@ -269,10 +269,10 @@ export default function ScanProgressPanel({
         {/* ══ Footer ══ */}
         <div className="h-px bg-white/[0.04]" />
         <div className="px-5 sm:px-8 py-3 flex items-center justify-between gap-4">
-          <span className="text-[10px] text-white/15 font-mono tracking-wider shrink-0">
+          <span className="text-[10px] text-white font-mono tracking-wider shrink-0">
             ID · {scanJobId?.slice(-8)?.toUpperCase() ?? "——"}
           </span>
-          <span className="flex items-center gap-2 text-[10px] text-white/20 text-right">
+          <span className="flex items-center gap-2 text-[10px] text-white text-right">
             <div className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
             You can leave — scan runs in the background
           </span>
