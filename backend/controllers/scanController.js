@@ -15,6 +15,9 @@ import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
 import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 
+import mappingService from '../services/mappingService.js';
+import RepoDownloader from '../services/githubService.js';
+
 export async function validateTargetAndRepoURLs(req, res) {
   try {
     const { targetURL, githubRepoUrl } = req.body;
@@ -73,7 +76,6 @@ export async function startZapScan(req, res) {
     res.status(202).json({ scanJobId: scan._id.toString() });
 
     broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-
     runScanInBackground(url, scan._id, userId);
   } catch (error) {
     console.error("[ScanController] Failed to create scan job:", error);
@@ -86,6 +88,51 @@ async function runScanInBackground(url, scanJobId, userId) {
     const { report } = await runZapScanService(url, scanJobId, userId);
 
     const extractedReport = await extractZapReport(report, scanJobId);
+
+
+
+
+    console.log("===================================================================\n");
+
+    console.log(JSON.stringify(extractedReport, null, 2));
+    try {
+      //Sent report to mapping to map files
+      console.log("\nStep 2: Parsing ZAP Report...");
+      const alerts = extractedReport;
+
+
+      const repoPath = await RepoDownloader.downloadSourceCode(githubRepoUrl, 'user_1');
+      console.log(`✅ Repo cloned to: ${repoPath}`);
+
+
+      const targetAlert = alerts.find(a => a.type === 'SQL Injection');
+      console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
+      //cloning repo
+
+      // mapping
+      console.log("\nStep 3: Mapping URL to Source Code...");
+      const location = await mappingService.mapAlertToCode(repoPath, targetAlert);
+      if (location) {
+        console.log("-----------------------------------------");
+        console.log(`🎯 MATCH FOUND!`);
+        console.log(`📄 File: ${location.filePath}`);
+        console.log(`📍 Line: ${location.line}`);
+        console.log(`💻 Code: ${location.snippet}`);
+        console.log("-----------------------------------------");
+
+      } else {
+        console.error("❌ Failed to map the vulnerability to code.");
+      }
+
+    }
+    catch (error) {
+      console.error("💥 Master Test Failed:", error.message);
+    }
+    console.log("===================================================================\n");
+
+
+
+
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
     generatePatchesInBackground(extractedReport, scanJobId, userId);
