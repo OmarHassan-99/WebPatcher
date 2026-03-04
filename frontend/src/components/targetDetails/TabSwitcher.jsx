@@ -12,7 +12,8 @@ export default function TabSwitcher({
     const isActive = activeTab === id;
     const count = id === "recommendations" ? recsCount : vulnsCount;
     return (
-      <button
+      <Motion.button
+        layout
         key={id}
         onClick={() => setActiveTab(id)}
         className="relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors duration-200 z-0 group"
@@ -53,6 +54,10 @@ export default function TabSwitcher({
           <Motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
+            transition={{
+              type: "spring",
+              delay: count === vulnsCount ? 0.6 : 0,
+            }}
             className={`min-w-[20px] h-5 px-1.5 rounded-full text-xs font-bold flex items-center justify-center ${
               isActive
                 ? "bg-primary-100 text-primary-500 border border-primary-500/40"
@@ -62,7 +67,7 @@ export default function TabSwitcher({
             {count}
           </Motion.span>
         )}
-      </button>
+      </Motion.button>
     );
   });
 }

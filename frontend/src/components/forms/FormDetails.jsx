@@ -10,12 +10,12 @@ export default function FormDetails({ texts, mode, children }) {
     <div className="w-fit m-auto">
       <Motion.div
         variants={{
-          hidden: { opacity: 0, y: 50 },
-          visible: { opacity: 1, y: 0 },
+          hidden: { opacity: 0, y: 50, scale: 0.95 },
+          visible: { opacity: 1, y: 0, scale: 1 },
         }}
         initial="hidden"
         animate="visible"
-        transition={{ type: "spring" }}
+        transition={{ type: "spring", stiffness: 80, damping: 18 }}
         className="bg-gradient-to-r from-primary-800 to-primary-700 p-8 rounded-lg shadow-lg"
       >
         <h2 className="text-2xl font-bold text-white mb-2">{texts.title}</h2>

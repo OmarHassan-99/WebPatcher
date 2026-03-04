@@ -1,6 +1,8 @@
 import { motion as Motion } from "framer-motion";
 import { Link, useRouteLoaderData } from "react-router-dom";
 import { ArrowRight, Shield } from "lucide-react";
+import SplitText from "../../react-bits/SplitText";
+import ShinyText from "../../react-bits/ShinyText";
 
 export default function Hero() {
   const session = useRouteLoaderData("root");
@@ -20,28 +22,39 @@ export default function Hero() {
       </Motion.div>
 
       {/* Headline with animated gradient */}
-      <Motion.h1
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.25, type: "spring", stiffness: 50, damping: 18 }}
-        className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight max-w-3xl"
-      >
-        <span className="text-white">Detect, Analyze & </span>
-        <span className="hero-gradient-text">Patch Vulnerabilities</span>
-        <span className="text-white"> with AI</span>
-      </Motion.h1>
+      <div className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight max-w-3xl">
+        <SplitText
+          text="Detect, Analyze & "
+          className="text-white inline-block"
+          delay={25}
+        />
+        <SplitText
+          text="Patch Vulnerabilities "
+          className="hero-gradient-text inline-block"
+          delay={25}
+        />
+        <SplitText
+          text="with AI"
+          className="text-white inline-block"
+          delay={25}
+        />
+      </div>
 
       {/* Subtitle */}
-      <Motion.p
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+      <Motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.45, type: "spring", stiffness: 50, damping: 18 }}
-        className="mt-5 text-base sm:text-lg text-surface-300 max-w-xl leading-relaxed"
+        className="mt-5 text-base sm:text-lg text-surface-300 max-w-xl leading-relaxed bg-[#0a0a0a]/60 backdrop-blur-md p-4 rounded-xl border border-white/10"
       >
-        WebPatcher scans your web applications with OWASP ZAP, leverages AI to
-        generate precise fix recommendations, and auto-creates GitHub pull
-        requests — all in one seamless workflow.
-      </Motion.p>
+        <ShinyText
+          text="WebPatcher scans your web applications with OWASP ZAP, leverages AI to generate precise fix recommendations, and auto-creates GitHub pull requests — all in one seamless workflow."
+          speed={3}
+          className="w-full"
+          color="#94a3b8"
+          shineColor="#ffffff"
+        />
+      </Motion.div>
 
       {/* CTA buttons */}
       <Motion.div

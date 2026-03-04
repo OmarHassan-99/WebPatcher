@@ -15,6 +15,7 @@ import VulnerabilitiesPanel from "../components/targetDetails/vulnerabilities/Vu
 import RecommendationsPanel from "../components/targetDetails/recommendations/RecommendationsPanel";
 import TabSwitcher from "../components/targetDetails/TabSwitcher";
 import ScanProgressPanel from "../components/targets/newTarget/scanProgressPanel/ScanProgressPanel";
+import CountUp from "../react-bits/CountUp";
 
 export default function TargetDetailsPage() {
   const { targetId } = useParams();
@@ -146,7 +147,11 @@ export default function TargetDetailsPage() {
                 <p className="text-gray-300">
                   Found{" "}
                   <span className="font-bold text-red-400">
-                    {findings.length}
+                    <CountUp
+                      from={0}
+                      to={findings.length}
+                      className="font-bold text-red-400"
+                    />
                   </span>{" "}
                   potential vulnerabilities
                 </p>
@@ -177,7 +182,7 @@ export default function TargetDetailsPage() {
             </div>
 
             {/* Tab panels */}
-            <AnimatePresence mode="wait">
+            <AnimatePresence mode={recsCount > 0 ? "popLayout" : "wait"}>
               {activeTab === "vulnerabilities" ? (
                 <Motion.div
                   key="vulnerabilities"
