@@ -70,10 +70,10 @@ app.get("/api/csrf-token", (req, res) => {
   res.json({ csrfToken });
 });
 
-app.use(doubleCsrfProtection);
 app.use("/auth", userRouter);
 app.use("/api/scans", scanRouter);
 app.use("/api/recommendations", recommendationRouter);
+app.use(doubleCsrfProtection);
 
 app.use((err, req, res, next) => {
   if (err === invalidCsrfTokenError) {

@@ -263,7 +263,7 @@ export function GET_LOTTIE(stage, isError) {
     return { id: "error", animation: ErrorLottieAnimation, loop: false };
   if (stage === "done")
     return { id: "success", animation: SuccessLottieAnimation, loop: false };
-  if (["active_scan", "extracting", "patching"].includes(stage))
+  if (["extracting", "patching"].includes(stage))
     return { id: "ai", animation: AiProcessorLottieAnimation, loop: true };
   return { id: "loading", animation: loadingLottieAnimation, loop: true };
 }

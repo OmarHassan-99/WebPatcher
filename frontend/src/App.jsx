@@ -3,7 +3,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "react-hot-toast";
 import { queryClient } from "./utils/http/userAuth";
 import { checkAuthLoader, checkSessionLoader } from "./utils/checkAuth";
-import LoadingSpinner from "./components/ui/LoadingSpinner";
+import Loading from "./components/ui/Loading";
 
 import RootPage from "./pages/Root";
 import HomePage from "./pages/Home";
@@ -20,7 +20,7 @@ function App() {
     {
       path: "/",
       element: <RootPage />,
-      hydrateFallbackElement: <LoadingSpinner />,
+      hydrateFallbackElement: <Loading />,
       errorElement: <ErrorPage />,
       id: "root",
       loader: checkSessionLoader,

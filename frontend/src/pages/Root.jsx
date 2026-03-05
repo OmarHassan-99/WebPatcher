@@ -13,6 +13,7 @@ import { useEffect, useRef } from "react";
 import { getSocket, joinUserRoom, leaveUserRoom } from "../utils/socket";
 import toast from "react-hot-toast";
 import { queryClient } from "../utils/http/userAuth";
+import Particles from "../react-bits/Particles";
 
 export default function RootPage() {
   const session = useLoaderData();
@@ -133,9 +134,13 @@ export default function RootPage() {
   }, [user, navigate]);
 
   return (
-    <div className="flex flex-col min-h-screen w-full">
-      <div className="fixed top-0 size-full -z-10 bg-primary-900">
+    <div className="relative flex flex-col min-h-screen w-full">
+      <div className="fixed top-0 size-full -z-10">
         <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
+      </div>
+
+      <div className="absolute inset-0 w-full h-full -z-20 bg-black overflow-hidden">
+        <Particles particleCount={1000} />
       </div>
 
       <div className="fixed bottom-0 w-full z-50">
