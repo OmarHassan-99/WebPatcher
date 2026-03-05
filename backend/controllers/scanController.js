@@ -17,6 +17,7 @@ import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 
 import mappingService from '../services/mappingService.js';
 import RepoDownloader from '../services/githubService.js';
+const Downloader = new RepoDownloader();
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -76,14 +77,14 @@ export async function startZapScan(req, res) {
     res.status(202).json({ scanJobId: scan._id.toString() });
 
     broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-    runScanInBackground(url, scan._id, userId);
+    runScanInBackground(url, scan._id, userId, githubRepoUrl);
   } catch (error) {
     console.error("[ScanController] Failed to create scan job:", error);
     res.status(500).json({ message: "Failed to start scan" });
   }
 }
 
-async function runScanInBackground(url, scanJobId, userId) {
+async function runScanInBackground(url, scanJobId, userId, githubRepoUrl) {
   try {
     const { report } = await runZapScanService(url, scanJobId, userId);
 
@@ -101,14 +102,22 @@ async function runScanInBackground(url, scanJobId, userId) {
       const alerts = extractedReport;
 
 
-      const repoPath = await RepoDownloader.downloadSourceCode(githubRepoUrl, 'user_1');
+      //cloning repo
+      const repoPath = await Downloader.downloadSourceCode(githubRepoUrl, 'user_1');
       console.log(`✅ Repo cloned to: ${repoPath}`);
 
 
-      const targetAlert = alerts.find(a => a.type === 'SQL Injection');
-      console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
-      //cloning repo
+      const rawAlert = alerts.find(a => a.alertName === 'SQL Injection');
+      console.log(`✅ Target Alert Found: ${rawAlert.alertName} on ${rawAlert.instances[0].uri}`);
 
+      const targetAlert = {
+        type: rawAlert.alertName,
+        url: rawAlert.instances[0].uri, // ZAP بيبعت URI جوه instances
+        parameter: rawAlert.instances[0].param || "", // ZAP بيبعت param وليس parameter
+        evidence: rawAlert.instances[0].evidence || ""
+      };
+
+      console.log(`✅ Normalized Alert: Searching for "${targetAlert.parameter}" on ${targetAlert.url}`);
       // mapping
       console.log("\nStep 3: Mapping URL to Source Code...");
       const location = await mappingService.mapAlertToCode(repoPath, targetAlert);

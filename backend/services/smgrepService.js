@@ -6,11 +6,7 @@ const execPromise = util.promisify(exec);
 
 class SemgrepService {
     constructor() {
-        /**
-         * قاموس الأنماط الديناميكية (Semantic Patterns)
-         * نستخدم $REQ و $ANY و $SINK كمتغيرات وهمية (Metavariables) 
-         * ليفهم سيمجريب المنطق البرمجي بدلاً من النص الثابت.
-         */
+
         this.dynamicPatterns = {
             'javascript': {
                 'SQL Injection': '$REQ.$ANY.${param} ... $DB.query(...)',
@@ -33,14 +29,11 @@ class SemgrepService {
         };
     }
 
-    /**
-     * الوظيفة الرئيسية للربط بين تنبيه ZAP ومكان الكود
-     */
     async findVulnerabilityLocation(projectPath, zapAlert, language) {
         const { parameter, type } = zapAlert;
         const normalizedPath = projectPath.replace(/\\/g, '/');
 
-        // 1. اختيار النمط الديناميكي بناءً على اللغة ونوع الثغرة
+
         const langConfigs = this.dynamicPatterns[language] || this.dynamicPatterns['javascript'];
         const template = langConfigs[type] || langConfigs['Generic'];
         const pattern = template.replace('${param}', parameter);
@@ -48,12 +41,12 @@ class SemgrepService {
         console.log(`🚀 Executing Dynamic Scan: [Lang: ${language}] [Pattern: ${pattern}]`);
 
         try {
-            // 2. محاولة البحث السيمانتيك (بفهم الكود)
+
             let results = await this.runSemgrep(normalizedPath, language, pattern);
 
-            // 3. الحل البديل (Fallback): إذا فشل البحث السيمانتيك، نبحث عن الباراميتر كـ String
+
             if (results.length === 0) {
-                console.log(`⚠️ Semantic match failed. Trying Generic String Search for: ${parameter}`);
+                console.log(` Semantic match failed. Trying Generic String Search for: ${parameter}`);
                 results = await this.runSemgrep(normalizedPath, 'generic', parameter);
             }
 
@@ -68,11 +61,9 @@ class SemgrepService {
         }
     }
 
-    /**
-     * تنفيذ أمر سيمجريب في التيرمينال
-     */
+
     async runSemgrep(targetPath, lang, pattern) {
-        // نستخدم --json للحصول على مخرجات برمجية دقيقة
+
         const command = `semgrep --lang ${lang} --pattern "${pattern}" "${targetPath}" --json --quiet --no-git-ignore`;
 
         try {
@@ -80,7 +71,7 @@ class SemgrepService {
             const output = JSON.parse(stdout);
             return output.results || [];
         } catch (error) {
-            // سيمجريب قد يخرج بـ Code 1 إذا وجد نتائج، لذا نفحص الـ stdout
+
             if (error.stdout) {
                 const output = JSON.parse(error.stdout);
                 return output.results || [];
@@ -89,16 +80,14 @@ class SemgrepService {
         }
     }
 
-    /**
-     * تنسيق النتيجة النهائية لتكون جاهزة للـ AI
-     */
+
     formatResult(finding) {
         return {
             filePath: finding.path,
             line: finding.start.line,
             snippet: finding.extra.lines.trim(),
             message: finding.extra.message,
-            fullContent: finding.extra.lines // سنحتاجه لاحقاً لعمل الـ Patch
+            fullContent: finding.extra.lines
         };
     }
 }
