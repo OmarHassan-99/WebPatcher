@@ -31,7 +31,7 @@ export const generateFileTree = (dirPath, prefix = '') => {
 
 class RepoDownloader {
     constructor() {
-        this.baseTempPath = path.join(__dirname, 'web_patcher_storage');
+        this.baseTempPath = path.join(__dirname, '..//..//web_patcher_storage');
         if (!fs.existsSync(this.baseTempPath)) {
             fs.mkdirSync(this.baseTempPath);
         }
