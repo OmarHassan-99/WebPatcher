@@ -7,7 +7,7 @@ import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import SuccessLottieAnimation from "../lottie/Success.json";
 import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
 
-import { Home, ShieldAlert, Sparkles, Target, User } from "lucide-react";
+import { Home, ShieldAlert, Sparkles, Target, User, ArrowLeftRight } from "lucide-react";
 
 export const FEATURES = [
   {
@@ -209,6 +209,7 @@ export const STATUS_OPTIONS = [
 export const TABS = [
   { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert },
   { id: "recommendations", label: "AI Recommendations", icon: Sparkles },
+  { id: "compare", label: "Compare", icon: ArrowLeftRight },
 ];
 
 export const STAGES = [

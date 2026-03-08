@@ -35,7 +35,7 @@ const NameEmailSection = forwardRef(
 
         <button
           disabled={saveDisabled}
-          className="mt-6 w-full py-3 rounded-xl bg-primary-400 hover:bg-primary-300 text-white font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-primary-400"
+          className="mt-6 w-full py-3 rounded-xl border border-surface-600 bg-surface-700 hover:bg-surface-600 text-white font-semibold shadow-md cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-surface-800"
         >
           {isSubmittingUpdate ? "Saving..." : "Save Changes"}
         </button>

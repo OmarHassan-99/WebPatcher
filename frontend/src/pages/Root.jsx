@@ -9,11 +9,14 @@ import LightRays from "../react-bits/LightRays";
 import Dock from "../react-bits/Dock";
 import { DOCK_ITEMS } from "../data/constants";
 import useGitHubToast from "../hooks/useGitHubToast";
-import { useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef } from "react";
 import { getSocket, joinUserRoom, leaveUserRoom } from "../utils/socket";
 import toast from "react-hot-toast";
 import { queryClient } from "../utils/http/userAuth";
-import Particles from "../react-bits/Particles";
+
+const AnimatedBackground = lazy(
+  () => import("../components/ui/AnimatedBackground"),
+);
 
 export default function RootPage() {
   const session = useLoaderData();
@@ -66,7 +69,9 @@ export default function RootPage() {
             className="flex flex-col gap-0.5 cursor-pointer group"
             onClick={() => {
               toast.dismiss(t.id);
-              navigate(`/targets/${data.scanJobId}`);
+              navigate(`/targets/${data.scanJobId}`, {
+                state: { fromNotification: true },
+              });
             }}
           >
             <span className="text-sm font-semibold text-slate-100">
@@ -134,14 +139,17 @@ export default function RootPage() {
   }, [user, navigate]);
 
   return (
-    <div className="relative flex flex-col min-h-screen w-full">
+    <div className="relative w-full min-h-screen">
       <div className="fixed top-0 size-full -z-10">
-        <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
+        <LightRays raysOrigin="top-left" rayLength={0.7} />
+      </div>
+      <div className="fixed top-0 size-full -z-10">
+        <LightRays raysOrigin="top-right" rayLength={0.7} />
       </div>
 
-      <div className="absolute inset-0 w-full h-full -z-20 bg-black overflow-hidden">
-        <Particles particleCount={1000} />
-      </div>
+      <Suspense fallback={null}>
+        <AnimatedBackground />
+      </Suspense>
 
       <div className="fixed bottom-0 w-full z-50">
         {user && (
@@ -155,7 +163,7 @@ export default function RootPage() {
         )}
       </div>
       <main
-        className={`flex flex-1 flex-col ${location.pathname === "/" ? "pb-0" : "pb-20"}`}
+        className={`flex flex-1 flex-col min-h-screen ${location.pathname === "/" || location.pathname === "/auth" ? "pb-0" : "pb-20"}`}
       >
         <MainNavigation />
         <Outlet />

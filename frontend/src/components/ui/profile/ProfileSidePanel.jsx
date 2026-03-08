@@ -9,7 +9,7 @@ export default function ProfileSidePanel({
   return (
     <div className="flex flex-col justify-between md:w-1/3 text-center">
       {/* Tab Switch */}
-      <div className="flex flex-wrap gap-6 justify-center relative border-b border-primary-600 pb-2">
+      <div className="flex flex-wrap gap-6 justify-center relative border-b border-surface-700 pb-2">
         <CustomProfileButton
           handleClick={() => handleTabSwitch("name&email")}
           isActive={showField === "name&email"}
@@ -51,7 +51,7 @@ export default function ProfileSidePanel({
               className="size-full object-cover"
             />
           ) : (
-            <div className="size-full bg-primary-600 flex items-center justify-center text-4xl font-bold text-white">
+            <div className="size-full bg-surface-700 flex items-center justify-center text-4xl font-bold text-white border border-surface-600">
               {formData.name.charAt(0).toUpperCase()}
             </div>
           )}
@@ -60,7 +60,7 @@ export default function ProfileSidePanel({
         <h3 className="mt-4 text-xl font-semibold text-white">
           {formData.name}
         </h3>
-        <p className="text-primary-100">{formData.email}</p>
+        <p className="text-surface-400">{formData.email}</p>
       </div>
     </div>
   );

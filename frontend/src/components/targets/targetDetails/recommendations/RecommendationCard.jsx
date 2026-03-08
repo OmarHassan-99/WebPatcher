@@ -11,7 +11,7 @@ import {
   Wrench,
   FileCode2,
 } from "lucide-react";
-import { CONTENT_VARIANTS, RISK_COLORS } from "../../../data/constants";
+import { CONTENT_VARIANTS, RISK_COLORS } from "../../../../data/constants";
 import Section from "./Section";
 import CodeBlock from "./CodeBlock";
 import FixBlock from "./FixBlock";

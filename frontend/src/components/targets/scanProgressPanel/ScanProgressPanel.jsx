@@ -2,13 +2,13 @@ import { motion as Motion, AnimatePresence } from "framer-motion";
 import { XCircle, ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import Lottie from "lottie-react";
-import { useScanProgress } from "../../../../hooks/useScanProgress";
+import { useScanProgress } from "../../../hooks/useScanProgress";
 import {
   GET_LOTTIE,
   GET_STAGE_STATUS,
   STAGE_ORDER,
   STAGES,
-} from "../../../../data/constants";
+} from "../../../data/constants";
 import LoadingResultsPanel from "./LoadingResultsPanel";
 import Shimmer from "./Shimmer";
 import LiveTimer from "./LiveTimer";

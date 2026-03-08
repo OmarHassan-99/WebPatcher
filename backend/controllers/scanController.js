@@ -15,8 +15,8 @@ import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
 import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 
-import mappingService from '../services/mappingService.js';
-import RepoDownloader from '../services/githubService.js';
+import mappingService from "../services/mappingService.js";
+import RepoDownloader from "../services/githubService.js";
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -59,17 +59,25 @@ export async function validateTargetAndRepoURLs(req, res) {
 }
 
 export async function startZapScan(req, res) {
-  const { url, targetName, githubRepoUrl, context } = req.body;
+  const { url, targetName, githubRepoUrl, context, previousScanId } = req.body;
   const userId = req.session.user._id;
 
   try {
     console.log(`[ScanController] Received request to scan URL: ${url}`);
+
+    if (previousScanId) {
+      // Hide the previous scan from the Target list UI
+      await ScanJob.findByIdAndUpdate(previousScanId, {
+        $set: { isHidden: true },
+      });
+    }
 
     const scan = await ScanJob.create({
       user: req.session.user._id,
       targetUrl: url,
       githubRepoUrl,
       targetName,
+      previousScanId,
       context,
     });
 
@@ -89,10 +97,9 @@ async function runScanInBackground(url, scanJobId, userId) {
 
     const extractedReport = await extractZapReport(report, scanJobId);
 
-
-
-
-    console.log("===================================================================\n");
+    console.log(
+      "===================================================================\n",
+    );
 
     console.log(JSON.stringify(extractedReport, null, 2));
     try {
@@ -100,18 +107,24 @@ async function runScanInBackground(url, scanJobId, userId) {
       console.log("\nStep 2: Parsing ZAP Report...");
       const alerts = extractedReport;
 
-
-      const repoPath = await RepoDownloader.downloadSourceCode(githubRepoUrl, 'user_1');
+      const repoPath = await RepoDownloader.downloadSourceCode(
+        githubRepoUrl,
+        "user_1",
+      );
       console.log(`✅ Repo cloned to: ${repoPath}`);
 
-
-      const targetAlert = alerts.find(a => a.type === 'SQL Injection');
-      console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
+      const targetAlert = alerts.find((a) => a.type === "SQL Injection");
+      console.log(
+        `✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`,
+      );
       //cloning repo
 
       // mapping
       console.log("\nStep 3: Mapping URL to Source Code...");
-      const location = await mappingService.mapAlertToCode(repoPath, targetAlert);
+      const location = await mappingService.mapAlertToCode(
+        repoPath,
+        targetAlert,
+      );
       if (location) {
         console.log("-----------------------------------------");
         console.log(`🎯 MATCH FOUND!`);
@@ -119,20 +132,15 @@ async function runScanInBackground(url, scanJobId, userId) {
         console.log(`📍 Line: ${location.line}`);
         console.log(`💻 Code: ${location.snippet}`);
         console.log("-----------------------------------------");
-
       } else {
         console.error("❌ Failed to map the vulnerability to code.");
       }
-
-    }
-    catch (error) {
+    } catch (error) {
       console.error("💥 Master Test Failed:", error.message);
     }
-    console.log("===================================================================\n");
-
-
-
-
+    console.log(
+      "===================================================================\n",
+    );
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
     generatePatchesInBackground(extractedReport, scanJobId, userId);
@@ -314,7 +322,8 @@ export async function getScans(req, res) {
   try {
     const page = Math.max(1, parseInt(req.query.page) || 1);
     const size = Math.min(50, parseInt(req.query.size) || 6);
-    const filter = { user: req.session.user._id };
+    // $ne: true means -> not equal to true
+    const filter = { user: req.session.user._id, isHidden: { $ne: true } };
     if (req.query.status) filter.status = req.query.status;
 
     const scans = await ScanJob.find(filter)
@@ -426,7 +435,7 @@ export async function getFindings(req, res) {
         (severityOrder[a.severity] ?? 4) - (severityOrder[b.severity] ?? 4),
     );
 
-    return res.json({ findings, status: scan.status });
+    return res.json({ findings, status: scan.status, scan });
   } catch (err) {
     console.error("getFindings error:", err);
     return res

@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowUp, Filter } from "lucide-react";
 import FilterPill from "../FilterPill";
-import { SEVERITY_FILTER } from "../../../data/constants";
+import { SEVERITY_FILTER } from "../../../../data/constants";
 
 export default function Filters({ filters, setFilters }) {
   const { severityFilter, sortOption, expandAll } = filters;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CONTENT_VARIANTS, RISK_COLORS } from "../../../data/constants";
+import { CONTENT_VARIANTS, RISK_COLORS } from "../../../../data/constants";
 import { ChevronDown, ShieldAlert } from "lucide-react";
 import VulnerabilityCard from "./VulnerabilityCard";
 import { motion as Motion, AnimatePresence } from "motion/react";

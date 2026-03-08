@@ -1,19 +1,28 @@
 import { motion as Motion } from "framer-motion";
-import { TABS } from "../../data/constants";
+import { TABS } from "../../../data/constants";
 
 export default function TabSwitcher({
   activeTab,
   setActiveTab,
   vulnsCount,
   recsCount,
+  showCompareTab,
 }) {
-  return TABS.map(({ id, label, icon }) => {
+  const visibleTabs = TABS.filter(
+    (tab) => tab.id !== "compare" || showCompareTab,
+  );
+
+  return visibleTabs.map(({ id, label, icon }) => {
     const TabIcon = icon;
     const isActive = activeTab === id;
-    const count = id === "recommendations" ? recsCount : vulnsCount;
+    const count =
+      id === "recommendations"
+        ? recsCount
+        : id === "compare"
+          ? null
+          : vulnsCount;
     return (
       <Motion.button
-        layout
         key={id}
         onClick={() => setActiveTab(id)}
         className="relative flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold cursor-pointer transition-colors duration-200 z-0 group"

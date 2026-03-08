@@ -2,14 +2,14 @@ import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { motion as Motion, AnimatePresence } from "framer-motion";
 import { Sparkles, ShieldOff } from "lucide-react";
-import { getScanRecommendations } from "../../../utils/http/scanRecommendations";
+import { getScanRecommendations } from "../../../../utils/http/scanRecommendations";
 import RecommendationCard from "./RecommendationCard";
 import FilterPill from "../FilterPill";
 import {
   LIST_VARIANTS,
   RISK_COLORS,
   SEVERITY_FILTER,
-} from "../../../data/constants";
+} from "../../../../data/constants";
 import SkeletonCard from "./SkeletonCard";
 
 export default function RecommendationsPanel({

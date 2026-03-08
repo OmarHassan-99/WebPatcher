@@ -26,11 +26,12 @@ export async function startZapScan({
   targetName,
   githubRepoUrl,
   context,
+  previousScanId,
 }) {
   try {
     const response = await api.post(
       "/api/scans/startScan",
-      { url, targetName, githubRepoUrl, context },
+      { url, targetName, githubRepoUrl, context, previousScanId },
       {
         headers: { "x-csrf-token": csrfToken },
       },

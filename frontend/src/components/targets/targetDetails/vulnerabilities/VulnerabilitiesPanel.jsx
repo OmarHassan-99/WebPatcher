@@ -2,8 +2,8 @@ import { useMemo, useState } from "react";
 import FindingRow from "./FindingRow";
 import { motion as Motion } from "motion/react";
 import { ShieldAlert } from "lucide-react";
-import { RISK_COLORS } from "../../../data/constants";
-import computeGroupedFindings from "../../../utils/findings";
+import { RISK_COLORS } from "../../../../data/constants";
+import computeGroupedFindings from "../../../../utils/findings";
 import Filters from "./Filters";
 
 export default function VulnerabilitiesPanel({ findings }) {
