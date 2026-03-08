@@ -168,7 +168,7 @@ export default function ProfilePage() {
       transition={{ type: "spring", damping: 20, stiffness: 120 }}
       className="flex justify-center mx-5 my-6 md:my-10"
     >
-      <div className="max-w-5xl bg-primary-800 backdrop-blur-lg shadow-xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
+      <div className="glass-card max-w-5xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
         {/* Left Side - Nav & Avatar */}
         <ProfileSidePanel
           user={user}
@@ -188,7 +188,7 @@ export default function ProfilePage() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
               transition={{ type: "spring" }}
-              className={`text-2xl font-bold text-primary-100 mb-4 ${
+              className={`text-2xl font-bold text-surface-50 mb-4 ${
                 showField === "dangerZone" && "text-red-400"
               }`}
             >

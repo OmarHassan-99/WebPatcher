@@ -13,13 +13,15 @@ import ScansPagination from "../components/targets/ScansPagination";
 import TargetsStandardHeader from "../components/targets/TargetsStandardHeader";
 import TargetsBulkHeader from "../components/targets/TargetsBulkHeader";
 import EmptyList from "../components/targets/EmptyList";
+import { useLocation } from "react-router-dom";
 
 export default function TargetsPage() {
+  const location = useLocation();
   const csrfToken = useCsrf();
   const [showModal, setShowModal] = useState(false);
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(location.state?.page || 1);
   const pageSize = 6;
 
   const { data, isPending, isPlaceholderData } = useQuery({
@@ -148,6 +150,7 @@ export default function TargetsPage() {
                     scan={scan}
                     isSelected={isSelected}
                     onToggle={toggleSelect}
+                    page={page}
                   />
                 );
               })}

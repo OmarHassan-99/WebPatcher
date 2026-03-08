@@ -1,6 +1,6 @@
 import { useField } from "formik";
 
-export default function CustomInput({ label, ...props }) {
+export default function CustomInput({ label, icon, ...props }) {
   const [field, meta] = useField(props);
   const isError = meta.touched && meta.error;
 
@@ -11,30 +11,40 @@ export default function CustomInput({ label, ...props }) {
         className={`mb-1.5 text-sm font-medium transition-colors duration-300 ${
           isError
             ? "text-red-400"
-            : "text-gray-400 group-focus-within:text-primary-300"
+            : "text-surface-400 group-focus-within:text-blue-400"
         }`}
       >
         {label}
       </label>
       <div className="relative">
+        {icon && (
+          <div
+            className={`absolute z-10 left-3.5 top-1/2 -translate-y-1/2 transition-colors duration-300 pointer-events-none ${
+              isError
+                ? "text-red-400"
+                : "text-surface-500 group-focus-within:text-blue-400"
+            }`}
+          >
+            {icon}
+          </div>
+        )}
         <input
           id={field.name}
           {...field}
           {...props}
           className={`
-            w-full px-4 py-3 rounded-xl 
+            w-full ${icon ? "pl-11" : "px-4"} pr-4 py-3 rounded-xl 
             bg-surface-800/50 backdrop-blur-md
             border transition-all duration-300 outline-none
-            placeholder:text-gray-500 text-sm font-medium
+            placeholder:text-surface-600 text-sm font-medium
             shadow-inner shadow-black/20
             ${
               isError
                 ? "border-red-500/50 focus:border-red-500 focus:ring-4 focus:ring-red-500/10 text-red-100 placeholder:text-red-300/50"
-                : "border-white/5 hover:border-white/10 focus:border-primary-400/80 focus:ring-4 focus:ring-primary-500/10 text-white"
+                : "border-white/5 hover:border-white/10 focus:border-blue-500/80 focus:ring-4 focus:ring-blue-500/20 text-white"
             }
           `}
         />
-        {/* Optional: Add an icon slot here if needed later */}
       </div>
       <div className="h-5 mt-1">
         {isError && (

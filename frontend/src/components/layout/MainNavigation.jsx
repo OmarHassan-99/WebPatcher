@@ -46,7 +46,6 @@ export default function MainNavigation() {
         <Motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          whileHover={{ scale: 1.05 }}
           transition={{ type: "spring" }}
           className="flex items-center gap-2 mr-5"
         >

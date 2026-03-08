@@ -6,6 +6,15 @@ const scanJobSchema = new mongoose.Schema(
     targetUrl: { type: String, required: true },
     githubRepoUrl: { type: String },
     targetName: { type: String },
+    previousScanId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "ScanJob",
+      default: null,
+    },
+    isHidden: {
+      type: Boolean,
+      default: false,
+    },
     context: {
       db: [{ type: String }],
       lang: [{ type: String }],

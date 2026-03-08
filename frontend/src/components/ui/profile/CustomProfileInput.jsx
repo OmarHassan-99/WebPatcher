@@ -20,7 +20,7 @@ export default function CustomProfileInput({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className="w-full bg-transparent border-b-2 border-primary-500 text-primary-100 focus:border-primary-200 focus:outline-none py-2 transition"
+        className="w-full bg-transparent border-b-2 border-surface-600 text-surface-50 focus:border-blue-500 focus:outline-none py-2 transition"
       />
     </>
   );

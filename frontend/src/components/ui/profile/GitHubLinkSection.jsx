@@ -22,7 +22,7 @@ const GitHubLinkSection = forwardRef(
           <div>
             <p className="text-white">
               GitHub Username:{" "}
-              <span className="text-primary-100">{user.githubUsername}</span>
+              <span className="text-surface-300">{user.githubUsername}</span>
             </p>
             <p className="text-white">
               GitHub Link:{" "}
@@ -30,7 +30,7 @@ const GitHubLinkSection = forwardRef(
                 href={`https://github.com/${user.githubUsername}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-primary-200 hover:text-primary-300 transition-colors"
+                className="text-blue-400 hover:text-blue-300 transition-colors"
               >
                 {`https://github.com/${user.githubUsername}`}
               </a>

@@ -42,7 +42,7 @@ const itemVariants = {
   },
 };
 
-export default function ScanCard({ scan, isSelected, onToggle }) {
+export default function ScanCard({ scan, isSelected, onToggle, page = 1 }) {
   const csrfToken = useCsrf();
   const [showModal, setShowModal] = useState(false);
 
@@ -221,6 +221,7 @@ export default function ScanCard({ scan, isSelected, onToggle }) {
 
               <Link
                 to={`/targets/${scan._id}`}
+                state={{ page }}
                 className="px-3 py-2 hover:bg-white/10 rounded-full transition duration-500 flex items-center gap-2"
               >
                 <ShinyText text="View Scan" />

@@ -2,7 +2,7 @@ import Lottie from "lottie-react";
 import { ArrowLeft } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion as Motion } from "motion/react";
-import { FADE_VARIANTS } from "../../data/constants";
+import { FADE_VARIANTS } from "../../../data/constants";
 
 export default function StageView({
   animation,

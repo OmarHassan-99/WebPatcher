@@ -1,4 +1,6 @@
 import { Formik, Form } from "formik";
+import { motion as Motion } from "motion/react";
+import { Loader2 } from "lucide-react";
 import FormDetails from "./FormDetails";
 import { loginSchema, registerSchema } from "../../schemas";
 
@@ -19,25 +21,28 @@ export default function FormikForm({
         validateOnChange={false}
       >
         {({ isSubmitting }) => (
-          <Form>
+          <Form className="space-y-1">
             {content}
-            <button
+            <Motion.button
               type="submit"
               disabled={isSubmitting}
-              className={`w-full py-2 rounded-md text-white font-semibold transition-colors ${
+              whileHover={!isSubmitting ? { scale: 1.02 } : {}}
+              whileTap={!isSubmitting ? { scale: 0.98 } : {}}
+              className={`w-full py-3 mt-2 rounded-xl text-white font-semibold transition-all duration-300 flex items-center justify-center gap-2 border ${
                 isSubmitting
-                  ? "bg-primary-500 cursor-not-allowed"
-                  : "bg-primary-400 hover:bg-primary-300 cursor-pointer"
+                  ? "bg-surface-800 border-surface-700 cursor-not-allowed opacity-60"
+                  : "bg-surface-800 border-surface-600 hover:bg-surface-700 hover:border-surface-500 shadow-md cursor-pointer backdrop-blur-sm"
               }`}
             >
+              {isSubmitting && <Loader2 size={18} className="animate-spin" />}
               {isSubmitting
                 ? mode === "register"
-                  ? "Registering..."
-                  : "Logging in..."
+                  ? "Creating account..."
+                  : "Signing in..."
                 : mode === "register"
-                  ? "Register"
-                  : "Login"}
-            </button>
+                  ? "Create Account"
+                  : "Sign In"}
+            </Motion.button>
           </Form>
         )}
       </Formik>

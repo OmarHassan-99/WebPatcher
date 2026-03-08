@@ -9,8 +9,8 @@ export default function Footer() {
       initial={{ opacity: 0, y: -20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ amount: 0.2, once: true }}
-      transition={{ type: "spring", stiffness: 50 }}
-      className="w-full border-t border-primary-700 px-5 py-7 text-primary-200"
+      transition={{ type: "spring" }}
+      className="w-full border-t border-white/10 px-5 py-7 text-primary-200 overflow-hidden"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm text-white text-left">

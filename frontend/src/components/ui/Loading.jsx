@@ -1,16 +1,18 @@
+import { lazy, Suspense } from "react";
 import { Loader2 } from "lucide-react";
-import Particles from "../../react-bits/Particles";
 import LightRays from "../../react-bits/LightRays";
 import ShinyText from "../../react-bits/ShinyText";
+
+const AnimatedBackground = lazy(() => import("./AnimatedBackground"));
 
 export default function Loading() {
   return (
     <div className="relative flex flex-col items-center justify-center min-h-screen gap-4">
-      <div className="absolute inset-0 w-full h-full -z-20 bg-black overflow-hidden pointer-events-none">
-        <Particles />
-        <div className="fixed top-0 size-full -z-10">
-          <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
-        </div>
+      <Suspense fallback={null}>
+        <AnimatedBackground />
+      </Suspense>
+      <div className="fixed top-0 size-full -z-10 pointer-events-none">
+        <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
       </div>
 
       <div className="relative z-10 flex flex-col items-center gap-6 glass-card p-8 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-lg">
