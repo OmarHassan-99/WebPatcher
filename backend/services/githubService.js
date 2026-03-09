@@ -47,8 +47,8 @@ class RepoDownloader {
 
             execSync('git init', options);
             execSync(`git remote add origin ${repoUrl}`, options);
+            console.log("Initialized git repository and set remote.");
             execSync('git config core.sparseCheckout true', options);
-
             const patterns = [
 
                 '/*.json', '/*.xml', '/*.txt', '/*.toml', '/*.config', '/*.js',
@@ -77,6 +77,7 @@ class RepoDownloader {
 
             try {
                 execSync('git pull --depth 1 origin main', options);
+                console.log("Pulled from 'main' branch.");
             } catch (e) {
                 execSync('git pull --depth 1 origin master', options);
             }
