@@ -226,7 +226,7 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
 
     const patchResult = await generatePatchesForFindings(
       findings,
-      "Medium",
+      "Low",
       context,
     );
 

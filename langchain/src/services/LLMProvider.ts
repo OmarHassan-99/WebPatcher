@@ -1,5 +1,6 @@
 import { ChatOpenAI } from "@langchain/openai";
 import { logger } from "../../logging/logger";
+import { MAX_RESPONSE_TOKENS } from "../utils/TokenEstimator";
 
 interface LLMConfig {
     temperature?: number;
@@ -42,7 +43,7 @@ export class LLMProvider {
         this.llm = new ChatOpenAI({
             modelName: this.modelName,
             temperature: this.config?.temperature ?? 0.2,
-            maxTokens: 2048,
+            maxTokens: MAX_RESPONSE_TOKENS,
             topP: 0.9,
             maxRetries: 3,
             apiKey,
@@ -89,6 +90,18 @@ export class LLMProvider {
                     error?.response?.status === 429 ||
                     error?.status === 429 ||
                     (error?.message && error.message.includes("429"));
+
+                const isTokenOverflow =
+                    error?.message &&
+                    (error.message.includes("context_length") ||
+                     error.message.includes("token") ||
+                     error.message.includes("maximum context"));
+
+                if (isTokenOverflow) {
+                    logger.error(
+                        `[LLMProvider] Token/context overflow on attempt ${attempt}/${maxRetries}: ${error.message}`
+                    );
+                }
 
                 if (isRateLimit) {
                     logger.warn(
