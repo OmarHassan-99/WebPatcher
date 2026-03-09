@@ -1,6 +1,10 @@
 
 
 
+import { config } from "dotenv";
+import * as path from "path";
+config({ path: path.resolve(__dirname, "../../backend/.env") });
+
 export { PatchGenerator } from "./services/PatchGenerator";
 export { ZapFindingAdapter } from "./adapters/ZapFindingAdapter";
 

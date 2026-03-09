@@ -12,7 +12,6 @@ export class PatchGenerator {
     constructor(config?: PatchGeneratorConfig) {
         // Initialize the Singleton Provider
         this.llmProvider = LLMProvider.getInstance({
-            baseUrl: config?.baseUrl,
             temperature: config?.temperature
         });
 

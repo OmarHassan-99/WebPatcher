@@ -1,3 +1,6 @@
+import { config } from "dotenv";
+import * as path from "path";
+config({ path: path.resolve(__dirname, "../../backend/.env") });
 import express from "express";
 import cors from "cors";
 import { PatchGenerator } from "./services/PatchGenerator";
