@@ -32,6 +32,7 @@ import { queryClient } from "../../utils/http/userAuth";
 import DeleteConfirmationModal from "./DeleteConfirmationModal";
 import ContextBadge from "./ContextBadge";
 import ShinyText from "../../react-bits/ShinyText";
+import { generateTargetSlug } from "../../utils/slugify";
 
 const itemVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -220,7 +221,7 @@ export default function ScanCard({ scan, isSelected, onToggle, page = 1 }) {
               </div>
 
               <Link
-                to={`/targets/${scan._id}`}
+                to={`/targets/${generateTargetSlug(scan._id, scan.targetName)}`}
                 state={{ page }}
                 className="px-3 py-2 hover:bg-white/10 rounded-full transition duration-500 flex items-center gap-2"
               >
