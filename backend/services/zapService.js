@@ -34,10 +34,12 @@ async function pollWithTimeout(
 ) {
   const startTime = Date.now();
   let sleepMs = 2000; // Start with 2s polling
+  let consecutiveErrors = 0;
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
       const status = await statusCheckFn();
+      consecutiveErrors = 0; // reset on success
 
       if (onProgressFn) {
         onProgressFn(status);
@@ -48,7 +50,11 @@ async function pollWithTimeout(
         return true;
       }
     } catch (e) {
-      console.warn(`[ZapService] ${stageName} polling error:`, e?.message || e);
+      consecutiveErrors++;
+      console.warn(`[ZapService] ${stageName} polling error (${consecutiveErrors}/10):`, e?.message || e);
+      if (consecutiveErrors >= 10) {
+        throw new Error(`ZAP API repeatedly unreachable. ZAP may have crashed (OOM) during intensive scans. Stage: ${stageName}`);
+      }
     }
 
     await sleep(sleepMs);
