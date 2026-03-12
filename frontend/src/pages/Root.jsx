@@ -13,6 +13,7 @@ import { lazy, Suspense, useEffect, useRef } from "react";
 import { getSocket, joinUserRoom, leaveUserRoom } from "../utils/socket";
 import toast from "react-hot-toast";
 import { queryClient } from "../utils/http/userAuth";
+import { extractIdFromSlug } from "../utils/slugify";
 
 const AnimatedBackground = lazy(
   () => import("../components/ui/AnimatedBackground"),
@@ -47,7 +48,7 @@ export default function RootPage() {
     socket.on("connect", joinRoom);
 
     function onCreated() {
-      queryClient.resetQueries({ queryKey: ["scans"] });
+      queryClient.invalidateQueries({ queryKey: ["scans"] });
     }
 
     function onStatus(data) {
@@ -58,8 +59,12 @@ export default function RootPage() {
     }
 
     function onComplete(data) {
+      const pathParts = locationRef.current.split("/");
+      const currentSlug = pathParts[1] === "targets" ? pathParts[2] : null;
+      const currentId = currentSlug ? extractIdFromSlug(currentSlug) : null;
+
       const isViewingCurrentScan =
-        locationRef.current === `/targets/${data.scanJobId}` ||
+        currentId === data.scanJobId ||
         locationRef.current === "/targets/new";
       if (isViewingCurrentScan) return;
 

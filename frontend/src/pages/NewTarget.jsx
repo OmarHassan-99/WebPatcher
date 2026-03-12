@@ -7,6 +7,7 @@ import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
 import useCsrf from "../hooks/useCsrf";
 import TargetAndRepoURLs from "../components/targets/newTarget/Target&RepoURLs";
 import AiContext from "../components/targets/newTarget/AiContext";
+import { generateTargetSlug } from "../utils/slugify";
 
 const GITHUB_INSTALL_URL =
   "https://github.com/apps/webpatcher-ai-powered-assistant/installations/new";
@@ -84,7 +85,8 @@ export default function NewTargetPage() {
       {
         onSuccess: (data) => {
           setActiveScanJobId(data.scanJobId);
-          navigate(`/targets/${data.scanJobId}`, {
+          const newSlug = generateTargetSlug(data.scanJobId, formData.targetName);
+          navigate(`/targets/${newSlug}`, {
             replace: true,
             state: { fromNewTarget: true },
           });

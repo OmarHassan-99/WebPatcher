@@ -49,7 +49,7 @@ function App() {
           loader: checkAuthLoader,
         },
         {
-          path: "targets/:targetId",
+          path: "targets/:slug",
           element: <TargetDetailsPage />,
           loader: checkAuthLoader,
         },

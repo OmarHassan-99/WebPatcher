@@ -25,3 +25,6 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
+
+# web_patcher_storage
+web_patcher_storage/
