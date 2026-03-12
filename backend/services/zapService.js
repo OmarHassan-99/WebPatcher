@@ -77,6 +77,9 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
   try {
     console.log("Starting a new ZAP session to cleanup...");
     await zap.core.newSession({});
+    
+    console.log("Setting ZAP mode to 'attack'...");
+    await zap.core.setMode({ mode: "attack" });
   } catch (err) {
     console.error("Failed to initialize ZAP session:", err);
     throw err;
@@ -187,11 +190,11 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
 
   // --- 3. Active Scan ---
   try {
-    console.log("[ZapService] Configuring a fast Active scan policy...");
+    console.log("[ZapService] Starting active scan with Pen Test policy...");
 
     emitScanEvent(scanJobId, "scan:stage", {
       stage: "active_scan",
-      message: "Active scan starting…",
+      message: "Starting active scan with Pen Test policy…",
     });
 
     emitScanEvent(scanJobId, "scan:progress", {
@@ -200,35 +203,47 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
       message: "Active scan starting…",
     });
 
-    await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
+    // Create the Pen Test policy if it doesn't exist, then configure it.
+    try {
+      await zap.ascan.addScanPolicy({ scanpolicyname: "Pen Test" });
+    } catch (e) {
+      // Ignored: Policy likely already exists
+    }
 
-    // Enable high-priority web vulnerability scanners (SQLi, XSS, etc)
-    // 40018: SQL Injection, 40012: Cross Site Scripting (Reflected), 40014: Cross Site Scripting (Persistent), 40016: Cross Site Scripting (Persistent) - Prime, 40017: Cross Site Scripting (Persistent) - Spider
-    await zap.ascan.enableScanners({
-      ids: "40018,40012,40014,40016,40017",
-      scanpolicyname: "Default Policy",
+    // Set aggressive attack parameters: HIGH attack strength, LOW alert threshold
+    await zap.ascan.updateScanPolicy({ 
+      scanpolicyname: "Pen Test", 
+      attackstrength: "HIGH", 
+      alertthreshold: "LOW" 
     });
+
+    // Ensure all attack plugins are enabled for the Pen Test policy
+    await zap.ascan.enableAllScanners({ scanpolicyname: "Pen Test" });
 
     // Optimization: Increase concurrent scanning threads
     await zap.ascan.setOptionThreadPerHost({ integer: 5 });
 
-    const ascanResponse = await zap.ascan.scan({ url: targetUrl });
+    const ascanResponse = await zap.ascan.scan({ 
+      url: targetUrl,
+      scanpolicyname: "Pen Test" 
+    });
     const ascanId = ascanResponse.scan;
 
     await pollWithTimeout(
       async () => parseInt((await zap.ascan.status(ascanId)).status, 10),
       (status) => status >= 100,
       (status) => {
-        console.log(`[ZapService] Active Scan progress: ${status}%`);
+        console.log(`[ZapService] Active scan progress: ${status}%`);
         emitScanEvent(scanJobId, "scan:progress", {
           stage: "active_scan",
           percent: status,
           message: `Active scan running… ${status}%`,
         });
       },
-      15 * 60 * 1000, // 15 minute max for the active scan
-      "Active Scan",
+      30 * 60 * 1000, // 30 minute max for the active scan (Pen Test is aggressive)
+      "Active Scan (Pen Test Mode)",
     );
+    console.log("[ZapService] Scan completed");
   } catch (err) {
     console.error("[ZapService] Active scan error:", err?.message || err);
 
