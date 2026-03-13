@@ -11,8 +11,11 @@ export default function Loading() {
       <Suspense fallback={null}>
         <AnimatedBackground />
       </Suspense>
-      <div className="fixed top-0 size-full -z-10 pointer-events-none">
-        <LightRays raysSpeed={1} rayLength={0.7} mouseInfluence={0.1} />
+      <div className="fixed top-0 size-full -z-10">
+        <LightRays raysOrigin="top-left" rayLength={0.7} />
+      </div>
+      <div className="fixed top-0 size-full -z-10">
+        <LightRays raysOrigin="top-right" rayLength={0.7} />
       </div>
 
       <div className="relative z-10 flex flex-col items-center gap-6 glass-card p-8 rounded-3xl border border-white/5 bg-black/40 backdrop-blur-lg">

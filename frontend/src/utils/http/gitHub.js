@@ -20,3 +20,8 @@ export async function unlinkGitHub({ csrfToken }) {
     throw new Error(error.message);
   }
 }
+
+export async function fetchGitHubRepos() {
+  const response = await api.get("/auth/github/repos");
+  return response.data;
+}

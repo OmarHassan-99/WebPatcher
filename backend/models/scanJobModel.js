@@ -24,6 +24,17 @@ const scanJobSchema = new mongoose.Schema(
       ws: [{ type: String }],
       branch: { type: String, default: "main" },
     },
+    authConfig: {
+      enabled: { type: Boolean, default: false },
+      loginUrl: { type: String },
+      usernameField: { type: String, default: "username" },
+      passwordField: { type: String, default: "password" },
+      username: { type: String },
+      password: { type: String },
+      loggedInIndicator: { type: String },
+      loggedOutIndicator: { type: String },
+      extraPostData: { type: String },
+    },
     status: {
       type: String,
       enum: [

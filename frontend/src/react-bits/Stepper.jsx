@@ -167,15 +167,21 @@ function StepContentWrapper({
   className,
 }) {
   const [parentHeight, setParentHeight] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
 
   return (
     <Motion.div
-      style={{ position: "relative", overflow: "hidden" }}
+      style={{
+        position: "relative",
+        overflow: isAnimating ? "hidden" : "visible",
+      }}
       animate={{ height: isCompleted ? 0 : parentHeight }}
-      transition={{ type: "spring", duration: 0.8 }}
+      transition={{ type: "spring", stiffness: 40 }}
+      onAnimationStart={() => setIsAnimating(true)}
+      onAnimationComplete={() => setIsAnimating(false)}
       className={`w-full ${className}`}
     >
-      <AnimatePresence initial={false} mode="sync" custom={direction}>
+      <AnimatePresence mode="popLayout" custom={direction}>
         {!isCompleted && (
           <SlideTransition
             key={currentStep}
@@ -192,10 +198,23 @@ function StepContentWrapper({
 
 function SlideTransition({ children, direction, onHeightReady }) {
   const containerRef = useRef(null);
+  const onHeightReadyRef = useRef(onHeightReady);
 
   useLayoutEffect(() => {
-    if (containerRef.current) onHeightReady(containerRef.current.offsetHeight);
-  }, [children, onHeightReady]);
+    onHeightReadyRef.current = onHeightReady;
+  });
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new ResizeObserver(() => {
+      if (el) onHeightReadyRef.current(el.offsetHeight);
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   return (
     <Motion.div
@@ -205,13 +224,12 @@ function SlideTransition({ children, direction, onHeightReady }) {
       initial="enter"
       animate="center"
       exit="exit"
-      transition={{ duration: 0.4 }}
+      transition={{ type: "spring", stiffness: 150, damping: 20 }}
       style={{
         position: "absolute",
         left: 0,
         right: 0,
         top: 0,
-        overflow: "hidden",
       }}
     >
       {children}

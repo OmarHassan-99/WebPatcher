@@ -2,6 +2,7 @@ import ZapClient from "zaproxy";
 import axios from "axios";
 import ScanJob from "../models/scanJobModel.js";
 import { broadcastToUser, emitScanEvent } from "./socketService.js";
+import { configureAuthentication, cleanupAuth } from "./zapAuthService.js";
 
 const zapOptions = {
   apiKey: "123",
@@ -62,7 +63,12 @@ async function pollWithTimeout(
   return false;
 }
 
-export async function runZapScanService(targetUrl, scanJobId, userId) {
+export async function runZapScanService(
+  targetUrl,
+  scanJobId,
+  userId,
+  authConfig = null,
+) {
   console.log(`[ZapService] Starting scan for: ${targetUrl}`);
 
   await ScanJob.findByIdAndUpdate(scanJobId, {
@@ -80,6 +86,31 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
   } catch (err) {
     console.error("Failed to initialize ZAP session:", err);
     throw err;
+  }
+
+  // --- 0. Authenticated Context Setup (optional) ---
+  let authContextId = null;
+  let authUserId = null;
+  if (authConfig && authConfig.enabled) {
+    try {
+      emitScanEvent(scanJobId, "scan:stage", {
+        stage: "auth",
+        message: "Configuring authenticated scanning…",
+      });
+
+      const authResult = configureAuthentication(zap, targetUrl, authConfig);
+      authContextId = authResult.contextId;
+      authUserId = authResult.userId;
+      console.log(
+        `[ZapService] Authentication configured: context=${authContextId}, user=${authUserId}`,
+      );
+    } catch (err) {
+      console.error("[ZapService] Authentication setup failed:", err.message);
+      emitScanEvent(scanJobId, "scan:stage", {
+        stage: "auth",
+        message: `Auth setup failed: ${err.message}. Continuing unauthenticated…`,
+      });
+    }
   }
 
   // --- 1. Classic Spider ---
@@ -101,7 +132,10 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
     await zap.spider.setOptionThreadCount({ integer: 10 });
     await zap.spider.setOptionMaxDepth({ integer: 5 });
 
-    const spiderResponse = await zap.spider.scan({ url: targetUrl });
+    const spiderParams = { url: targetUrl };
+    if (authContextId) spiderParams.contextName = "auth-ctx";
+    if (authUserId) spiderParams.as_user = authUserId;
+    const spiderResponse = await zap.spider.scan(spiderParams);
     const spiderId = spiderResponse.scan;
 
     await pollWithTimeout(
@@ -141,7 +175,9 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
     await zap.ajaxSpider.setOptionEventWait({ integer: 200 }); // Wait 200ms after clicks
     await zap.ajaxSpider.setOptionReloadWait({ integer: 500 }); // Wait 500ms after page loads
 
-    await zap.ajaxSpider.scan({ url: targetUrl });
+    const ajaxSpiderParams = { url: targetUrl };
+    if (authContextId) ajaxSpiderParams.contextName = "auth-ctx";
+    await zap.ajaxSpider.scan(ajaxSpiderParams);
 
     await pollWithTimeout(
       async () => {
@@ -212,7 +248,10 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
     // Optimization: Increase concurrent scanning threads
     await zap.ascan.setOptionThreadPerHost({ integer: 5 });
 
-    const ascanResponse = await zap.ascan.scan({ url: targetUrl });
+    const ascanParams = { url: targetUrl };
+    if (authContextId) ascanParams.contextId = authContextId;
+    if (authUserId) ascanParams.as_user = authUserId;
+    const ascanResponse = await zap.ascan.scan(ascanParams);
     const ascanId = ascanResponse.scan;
 
     await pollWithTimeout(
@@ -267,6 +306,11 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
       },
     },
   );
+
+  // Cleanup authenticated context if it was used
+  if (authContextId) {
+    await cleanupAuth(zap);
+  }
 
   return { report: alerts.data };
 }

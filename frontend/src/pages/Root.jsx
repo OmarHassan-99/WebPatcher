@@ -64,8 +64,7 @@ export default function RootPage() {
       const currentId = currentSlug ? extractIdFromSlug(currentSlug) : null;
 
       const isViewingCurrentScan =
-        currentId === data.scanJobId ||
-        locationRef.current === "/targets/new";
+        currentId === data.scanJobId || locationRef.current === "/targets/new";
       if (isViewingCurrentScan) return;
 
       toast.success(

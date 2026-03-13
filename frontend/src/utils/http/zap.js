@@ -27,11 +27,12 @@ export async function startZapScan({
   githubRepoUrl,
   context,
   previousScanId,
+  authConfig,
 }) {
   try {
     const response = await api.post(
       "/api/scans/startScan",
-      { url, targetName, githubRepoUrl, context, previousScanId },
+      { url, targetName, githubRepoUrl, context, previousScanId, authConfig },
       {
         headers: { "x-csrf-token": csrfToken },
       },
@@ -41,6 +42,24 @@ export async function startZapScan({
   } catch (error) {
     if (error.response) {
       throw new Error(error.response.data?.message || "Failed to start scan");
+    }
+    throw new Error(error.message);
+  }
+}
+
+export async function testAuth({ csrfToken, targetUrl, authConfig }) {
+  try {
+    const response = await api.post(
+      "/api/scans/testAuth",
+      { targetUrl, authConfig },
+      { headers: { "x-csrf-token": csrfToken } },
+    );
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      throw new Error(
+        error.response.data?.message || "Authentication test failed",
+      );
     }
     throw new Error(error.message);
   }

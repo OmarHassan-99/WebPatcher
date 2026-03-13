@@ -1,16 +1,32 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { lazy, Suspense, useState } from "react";
+import { useNavigate, useRouteLoaderData } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import Stepper, { Step } from "../react-bits/Stepper";
 import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
 import useCsrf from "../hooks/useCsrf";
-import TargetAndRepoURLs from "../components/targets/newTarget/Target&RepoURLs";
-import AiContext from "../components/targets/newTarget/AiContext";
+const TargetAndRepoURLs = lazy(
+  () =>
+    import("../components/targets/newTarget/TargetAndRepoURLs/Target&RepoURLs"),
+);
+import AuthContext from "../components/targets/newTarget/Authentication/AuthContext";
+import AiContext from "../components/targets/newTarget/AIContext/AiContext";
 import { generateTargetSlug } from "../utils/slugify";
 
 const GITHUB_INSTALL_URL =
   "https://github.com/apps/webpatcher-ai-powered-assistant/installations/new";
+
+const DEFAULT_AUTH_CONFIG = {
+  enabled: false,
+  loginUrl: "",
+  usernameField: "username",
+  passwordField: "password",
+  username: "",
+  password: "",
+  loggedInIndicator: "",
+  loggedOutIndicator: "",
+  extraPostData: "",
+};
 
 export default function NewTargetPage() {
   const [formData, setFormData] = useState({
@@ -18,6 +34,7 @@ export default function NewTargetPage() {
     githubRepoUrl: "",
     targetName: "",
     context: { db: [], lang: [], fw: [], os: [], scm: [], ws: [] },
+    authConfig: { ...DEFAULT_AUTH_CONFIG },
     isChecked: false,
   });
   const [error, setError] = useState({ targetUrl: "", githubRepoUrl: "" });
@@ -25,6 +42,8 @@ export default function NewTargetPage() {
   const [activeScanJobId, setActiveScanJobId] = useState(null);
 
   const navigate = useNavigate();
+  const session = useRouteLoaderData("root");
+  const user = session?.user;
 
   const csrfToken = useCsrf();
 
@@ -74,6 +93,11 @@ export default function NewTargetPage() {
   }
 
   function handleStartScan() {
+    // Only include authConfig if actually enabled
+    const authPayload = formData.authConfig.enabled
+      ? formData.authConfig
+      : undefined;
+
     startScanMutate(
       {
         csrfToken,
@@ -81,11 +105,15 @@ export default function NewTargetPage() {
         targetName: formData.targetName,
         githubRepoUrl: formData.githubRepoUrl,
         context: formData.context,
+        authConfig: authPayload,
       },
       {
         onSuccess: (data) => {
           setActiveScanJobId(data.scanJobId);
-          const newSlug = generateTargetSlug(data.scanJobId, formData.targetName);
+          const newSlug = generateTargetSlug(
+            data.scanJobId,
+            formData.targetName,
+          );
           navigate(`/targets/${newSlug}`, {
             replace: true,
             state: { fromNewTarget: true },
@@ -102,6 +130,13 @@ export default function NewTargetPage() {
 
   function updateField(name, value) {
     setFormData((prev) => ({ ...prev, [name]: value }));
+  }
+
+  function updateAuthConfig(field, value) {
+    setFormData((prev) => ({
+      ...prev,
+      authConfig: { ...prev.authConfig, [field]: value },
+    }));
   }
 
   function updateAiContext(name, value) {
@@ -139,12 +174,23 @@ export default function NewTargetPage() {
           isNextDisabled={!formData.targetUrl.trim() || !formData.isChecked}
           isPending={isPendingValidation}
         >
-          <TargetAndRepoURLs
+          <Suspense fallback={null}>
+            <TargetAndRepoURLs
+              formData={formData}
+              updateField={updateField}
+              error={error}
+              setError={setError}
+              isAnimatePulse={isAnimatePulse}
+              user={user}
+            />
+          </Suspense>
+        </Step>
+
+        <Step stepLabel="Authentication">
+          <AuthContext
             formData={formData}
-            updateField={updateField}
-            error={error}
-            setError={setError}
-            isAnimatePulse={isAnimatePulse}
+            updateAuthConfig={updateAuthConfig}
+            targetUrl={formData.targetUrl}
           />
         </Step>
 

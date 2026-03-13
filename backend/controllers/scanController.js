@@ -14,6 +14,8 @@ import {
 import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
 import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
+import { testAuthentication } from "../services/zapAuthService.js";
+import ZapClient from "zaproxy";
 
 import mappingService from "../services/mappingService.js";
 import RepoDownloader from "../services/githubService.js";
@@ -60,7 +62,14 @@ export async function validateTargetAndRepoURLs(req, res) {
 }
 
 export async function startZapScan(req, res) {
-  const { url, targetName, githubRepoUrl, context, previousScanId } = req.body;
+  const {
+    url,
+    targetName,
+    githubRepoUrl,
+    context,
+    previousScanId,
+    authConfig,
+  } = req.body;
   const userId = req.session.user._id;
 
   try {
@@ -80,21 +89,39 @@ export async function startZapScan(req, res) {
       targetName,
       previousScanId,
       context,
+      authConfig: authConfig || undefined,
     });
 
     res.status(202).json({ scanJobId: scan._id.toString() });
 
     broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-    runScanInBackground(url, scan._id, userId, githubRepoUrl);
+    runScanInBackground(
+      url,
+      scan._id,
+      userId,
+      githubRepoUrl,
+      authConfig || null,
+    );
   } catch (error) {
     console.error("[ScanController] Failed to create scan job:", error);
     res.status(500).json({ message: "Failed to start scan" });
   }
 }
 
-async function runScanInBackground(url, scanJobId, userId, githubRepoUrl) {
+async function runScanInBackground(
+  url,
+  scanJobId,
+  userId,
+  githubRepoUrl,
+  authConfig = null,
+) {
   try {
-    const { report } = await runZapScanService(url, scanJobId, userId);
+    const { report } = await runZapScanService(
+      url,
+      scanJobId,
+      userId,
+      authConfig,
+    );
 
     const extractedReport = await extractZapReport(report, scanJobId);
 
@@ -452,5 +479,47 @@ export async function getFindings(req, res) {
     return res
       .status(500)
       .json({ success: false, message: "Failed to fetch findings" });
+  }
+}
+
+export async function testZapAuthentication(req, res) {
+  try {
+    const { targetUrl, authConfig } = req.body;
+
+    if (!targetUrl || !authConfig || !authConfig.loginUrl) {
+      return res.status(400).json({
+        success: false,
+        message: "Target URL and authentication configuration are required",
+      });
+    }
+
+    if (!authConfig.username || !authConfig.password) {
+      return res.status(400).json({
+        success: false,
+        message: "Username and password are required",
+      });
+    }
+
+    const zapOptions = {
+      apiKey: "123",
+      proxy: { host: "127.0.0.1", port: 8080 },
+    };
+    const zap = new ZapClient(zapOptions);
+
+    const result = await testAuthentication(zap, targetUrl, {
+      ...authConfig,
+      enabled: true,
+    });
+
+    return res.json({
+      success: result.success,
+      message: result.message,
+    });
+  } catch (err) {
+    console.error("[ScanController] testAuthConfig error:", err);
+    return res.status(500).json({
+      success: false,
+      message: `Authentication test failed: ${err.message}`,
+    });
   }
 }
