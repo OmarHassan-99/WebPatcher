@@ -35,10 +35,12 @@ async function pollWithTimeout(
 ) {
   const startTime = Date.now();
   let sleepMs = 2000; // Start with 2s polling
+  let consecutiveErrors = 0;
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
       const status = await statusCheckFn();
+      consecutiveErrors = 0; // reset on success
 
       if (onProgressFn) {
         onProgressFn(status);
@@ -49,7 +51,16 @@ async function pollWithTimeout(
         return true;
       }
     } catch (e) {
-      console.warn(`[ZapService] ${stageName} polling error:`, e?.message || e);
+      consecutiveErrors++;
+      console.warn(
+        `[ZapService] ${stageName} polling error (${consecutiveErrors}/10):`,
+        e?.message || e,
+      );
+      if (consecutiveErrors >= 10) {
+        throw new Error(
+          `ZAP API repeatedly unreachable. ZAP may have crashed (OOM) during intensive scans. Stage: ${stageName}`,
+        );
+      }
     }
 
     await sleep(sleepMs);
@@ -83,6 +94,9 @@ export async function runZapScanService(
   try {
     console.log("Starting a new ZAP session to cleanup...");
     await zap.core.newSession({});
+
+    console.log("Setting ZAP mode to 'attack'...");
+    await zap.core.setMode({ mode: "attack" });
   } catch (err) {
     console.error("Failed to initialize ZAP session:", err);
     throw err;
@@ -223,11 +237,11 @@ export async function runZapScanService(
 
   // --- 3. Active Scan ---
   try {
-    console.log("[ZapService] Configuring a fast Active scan policy...");
+    console.log("[ZapService] Starting active scan with Pen Test policy...");
 
     emitScanEvent(scanJobId, "scan:stage", {
       stage: "active_scan",
-      message: "Active scan starting…",
+      message: "Starting active scan with Pen Test policy…",
     });
 
     emitScanEvent(scanJobId, "scan:progress", {
@@ -236,14 +250,22 @@ export async function runZapScanService(
       message: "Active scan starting…",
     });
 
-    await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
+    // Create the Pen Test policy if it doesn't exist, then configure it.
+    try {
+      await zap.ascan.addScanPolicy({ scanpolicyname: "Pen Test" });
+    } catch (e) {
+      // Ignored: Policy likely already exists
+    }
 
-    // Enable high-priority web vulnerability scanners (SQLi, XSS, etc)
-    // 40018: SQL Injection, 40012: Cross Site Scripting (Reflected), 40014: Cross Site Scripting (Persistent), 40016: Cross Site Scripting (Persistent) - Prime, 40017: Cross Site Scripting (Persistent) - Spider
-    await zap.ascan.enableScanners({
-      ids: "40018,40012,40014,40016,40017",
-      scanpolicyname: "Default Policy",
+    // Set aggressive attack parameters: HIGH attack strength, LOW alert threshold
+    await zap.ascan.updateScanPolicy({
+      scanpolicyname: "Pen Test",
+      attackstrength: "HIGH",
+      alertthreshold: "LOW",
     });
+
+    // Ensure all attack plugins are enabled for the Pen Test policy
+    await zap.ascan.enableAllScanners({ scanpolicyname: "Pen Test" });
 
     // Optimization: Increase concurrent scanning threads
     await zap.ascan.setOptionThreadPerHost({ integer: 5 });
@@ -251,23 +273,27 @@ export async function runZapScanService(
     const ascanParams = { url: targetUrl };
     if (authContextId) ascanParams.contextId = authContextId;
     if (authUserId) ascanParams.as_user = authUserId;
-    const ascanResponse = await zap.ascan.scan(ascanParams);
+    const ascanResponse = await zap.ascan.scan({
+      ...ascanParams,
+      scanpolicyname: "Pen Test",
+    });
     const ascanId = ascanResponse.scan;
 
     await pollWithTimeout(
       async () => parseInt((await zap.ascan.status(ascanId)).status, 10),
       (status) => status >= 100,
       (status) => {
-        console.log(`[ZapService] Active Scan progress: ${status}%`);
+        console.log(`[ZapService] Active scan progress: ${status}%`);
         emitScanEvent(scanJobId, "scan:progress", {
           stage: "active_scan",
           percent: status,
           message: `Active scan running… ${status}%`,
         });
       },
-      15 * 60 * 1000, // 15 minute max for the active scan
-      "Active Scan",
+      30 * 60 * 1000, // 30 minute max for the active scan (Pen Test is aggressive)
+      "Active Scan (Pen Test Mode)",
     );
+    console.log("[ZapService] Scan completed");
   } catch (err) {
     console.error("[ZapService] Active scan error:", err?.message || err);
 

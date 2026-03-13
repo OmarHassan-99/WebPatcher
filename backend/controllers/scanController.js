@@ -29,8 +29,7 @@ export async function validateTargetAndRepoURLs(req, res) {
 
     // 1. Validate Target URL
     if (!targetURL || !validateUrl(String(targetURL).trim())) {
-      errors.targetUrl =
-        "Invalid URL format (must be absolute, e.g., https://...)";
+      errors.targetUrl = "Invalid URL format (must be absolute, e.g., http://... or https://...)";
     } else {
       const check = await isHostReachable(targetURL);
       if (!check.ok) {
