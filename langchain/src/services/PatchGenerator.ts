@@ -4,18 +4,32 @@ import type { VulnerabilityInput, PatchOutput, PatchGeneratorConfig } from "../t
 import { PatchGenerationError } from "../types";
 import { z } from "zod";
 import { LLMProvider } from "./LLMProvider";
+import { estimateTokens, truncateToTokenLimit, MAX_PROMPT_TOKENS } from "../utils/TokenEstimator";
+import { RequestBudget } from "../utils/RequestBudget";
+import { logger } from "../../logging/logger";
+
+/** Priority order for severity levels (lower index = higher priority). */
+const SEVERITY_PRIORITY: Record<string, number> = {
+    High: 0,
+    Medium: 1,
+    Low: 2,
+    Informational: 3,
+};
 
 export class PatchGenerator {
     private promptTemplate: ChatPromptTemplate;
+    private lowSeverityPrompt: ChatPromptTemplate;
     private llmProvider: LLMProvider;
+    private requestBudget: RequestBudget;
 
     constructor(config?: PatchGeneratorConfig) {
-        // Initialize the Singleton Provider
         this.llmProvider = LLMProvider.getInstance({
-            baseUrl: config?.baseUrl,
             temperature: config?.temperature
         });
 
+        this.requestBudget = RequestBudget.getInstance();
+
+        // ── Full prompt for HIGH / MEDIUM severity ──────────────
         this.promptTemplate = ChatPromptTemplate.fromMessages([
             [
                 "system",
@@ -36,7 +50,7 @@ Hard requirements:
 - Output ONLY raw JSON. No markdown. No explanations.
 - The fix MUST be directly implementable in a real project.
 - DO NOT give generic advice.
-- DO NOT say “use parameterized queries” without showing the REAL code.
+- DO NOT say "use parameterized queries" without showing the REAL code.
 - Infer the backend technology from the Tech Stack or from the URL/port/pattern.
 - The vulnerable code MUST look like real code from a real controller/service/repository.
 - Show the TRUE injection sink (query, ORM call, template render, header config, etc.).
@@ -50,7 +64,7 @@ Code quality rules:
 - Follow best practices of the detected framework.
 - Use modern secure patterns (ORM, prepared statements, security middleware, CSP libraries, etc.).
 - Do NOT use pseudo-code.
-- Do NOT output placeholders like “your_table”.
+- Do NOT output placeholders like "your_table".
 
 Reasoning rules:
 
@@ -69,6 +83,31 @@ Security depth:
   - the secured data flow
 
 Keep the response compact for fast LLM generation.`
+            ],
+            [
+                "human",
+                `Vulnerability: {alert_name}
+Risk: {risk_level}
+URL: {affected_url}
+Description: {description}
+{evidence_section}
+{additional_context}`
+            ],
+        ]);
+
+        // ── Compact prompt for LOW severity ─────────────────────
+        this.lowSeverityPrompt = ChatPromptTemplate.fromMessages([
+            [
+                "system",
+                `You are a security engineer. Output ONLY a JSON object with these 6 fields:
+1. reasoning — 1 sentence why this is vulnerable
+2. vulnerable_code_example — short realistic example
+3. analysis — 1-2 sentence impact summary
+4. root_cause — 1 sentence
+5. suggested_fix — concise secure code patch
+6. file_type — language/file type
+
+Be concise. No markdown. No explanations outside the JSON.`
             ],
             [
                 "human",
@@ -116,17 +155,45 @@ Description: {description}
             ? `**Additional Context:**\n${additionalParts.join("\n\n")}`
             : "";
 
+        // Choose prompt based on severity
+        const isLow = validatedInput.risk_level === "Low";
+        const template = isLow ? this.lowSeverityPrompt : this.promptTemplate;
+
         try {
-            const formattedPrompt = await this.promptTemplate.formatMessages({
+            const templateVars = {
                 alert_name: validatedInput.alert_name,
                 risk_level: validatedInput.risk_level,
                 affected_url: validatedInput.affected_url,
                 description: validatedInput.description,
                 evidence_section: evidenceSection,
                 additional_context: additionalContext,
-            });
+            };
 
-            // Hand off the generation to the LLMProvider which supports Qwen -> Mistral fallback
+            // ── Token estimation & truncation ───────────────────
+            const rawPromptText = [
+                templateVars.alert_name,
+                templateVars.risk_level,
+                templateVars.affected_url,
+                templateVars.description,
+                templateVars.evidence_section,
+                templateVars.additional_context,
+            ].join(" ");
+
+            const estimatedTokenCount = estimateTokens(rawPromptText);
+
+            // If the human-message portion is too long, truncate the description
+            if (estimatedTokenCount > MAX_PROMPT_TOKENS) {
+                logger.warn(
+                    `[PatchGenerator] Prompt too long (~${estimatedTokenCount} tokens). Truncating description.`
+                );
+                const descBudget = Math.max(200, MAX_PROMPT_TOKENS - estimateTokens(
+                    rawPromptText.replace(templateVars.description, "")
+                ));
+                templateVars.description = truncateToTokenLimit(templateVars.description, descBudget);
+            }
+
+            const formattedPrompt = await template.formatMessages(templateVars);
+
             const result = await this.llmProvider.invokeWithFallback(async (llm) => {
                 const structuredLlm = llm.withStructuredOutput(PatchOutputSchema, {
                     name: "patch_recommendation",
@@ -169,39 +236,101 @@ Description: {description}
         context?: any,
         onProgress?: (current: number, total: number, name: string) => void
     ): Promise<Array<{ success: true; data: PatchOutput } | { success: false; error: string }>> {
-        let completed = 0;
 
-        // Ensure LLM config is loaded in advance if it hasn't been already
+        // Ensure LLM config is loaded in advance
         await this.llmProvider.initialize();
 
-        const promises = vulnerabilities.map(async (vuln, i) => {
+        // ── Sort by priority: High → Medium → Low ──────────────
+        const sorted = [...vulnerabilities].sort((a, b) => {
+            const pa = SEVERITY_PRIORITY[a.risk_level] ?? 99;
+            const pb = SEVERITY_PRIORITY[b.risk_level] ?? 99;
+            return pa - pb;
+        });
+
+        const total = sorted.length;
+        const results: Array<{ success: true; data: PatchOutput } | { success: false; error: string }> = [];
+        let completed = 0;
+
+        logger.info(`[PatchGenerator] Starting sequential processing of ${total} vulnerability(ies)`);
+
+        for (let i = 0; i < total; i++) {
+            const vuln = sorted[i];
+
+            // ── Budget check ────────────────────────────────────
+            if (!this.requestBudget.canMakeRequest()) {
+                const remaining = total - i;
+                logger.warn(
+                    `[PatchGenerator] Daily LLM request limit reached. ` +
+                    `Remaining ${remaining} vulnerability(ies) deferred.`
+                );
+                // Fill deferred entries
+                for (let j = i; j < total; j++) {
+                    results.push({
+                        success: false,
+                        error: "Daily LLM request limit reached. Remaining vulnerabilities deferred.",
+                    });
+                    completed++;
+                    if (onProgress) {
+                        onProgress(completed, total, sorted[j].alert_name);
+                    }
+                }
+                break;
+            }
+
+            // ── Log current processing state ────────────────────
+            const rawPromptEstimate = estimateTokens(
+                `${vuln.alert_name} ${vuln.risk_level} ${vuln.affected_url} ${vuln.description || ""}`
+            );
+            logger.info(
+                `[PatchGenerator] Processing vulnerability ${i + 1}/${total} | ` +
+                `Severity: ${vuln.risk_level.toUpperCase()} | ` +
+                `Estimated tokens: ~${rawPromptEstimate} | ` +
+                `Remaining request budget: ${this.requestBudget.getRemaining()}`
+            );
+
             try {
                 const startTime = Date.now();
                 const data = await this.generatePatch(vuln, context);
                 const duration = ((Date.now() - startTime) / 1000).toFixed(1);
-                console.log(`[PatchGenerator] Patch ${i + 1}/${vulnerabilities.length} completed in ${duration}s: ${vuln.alert_name}`);
-                
+
+                // Record the request *after* it succeeds
+                this.requestBudget.recordRequest();
+
+                logger.info(
+                    `[PatchGenerator] Patch ${i + 1}/${total} completed in ${duration}s: ${vuln.alert_name}`
+                );
+
+                completed++;
                 if (onProgress) {
-                    completed++;
-                    onProgress(completed, vulnerabilities.length, vuln.alert_name);
+                    onProgress(completed, total, vuln.alert_name);
                 }
-                
-                return { success: true as const, data };
+
+                results.push({ success: true as const, data });
             } catch (error) {
-                console.error(`[PatchGenerator] Patch ${i + 1}/${vulnerabilities.length} FAILED: ${vuln.alert_name}`);
-                
+                // Still count the request even on failure
+                this.requestBudget.recordRequest();
+
+                logger.error(
+                    `[PatchGenerator] Patch ${i + 1}/${total} FAILED: ${vuln.alert_name}`
+                );
+
+                completed++;
                 if (onProgress) {
-                    completed++;
-                    onProgress(completed, vulnerabilities.length, vuln.alert_name);
+                    onProgress(completed, total, vuln.alert_name);
                 }
-                
-                return {
+
+                results.push({
                     success: false as const,
                     error: error instanceof Error ? error.message : "Unknown error",
-                };
+                });
             }
-        });
+        }
 
-        return Promise.all(promises);
+        logger.info(
+            `[PatchGenerator] Done — ${results.filter(r => r.success).length}/${total} patches generated. ` +
+            `Requests used today: ${this.requestBudget.getUsed()}`
+        );
+
+        return results;
     }
 }

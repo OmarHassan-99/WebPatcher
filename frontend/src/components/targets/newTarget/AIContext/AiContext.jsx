@@ -7,7 +7,7 @@ import {
   OPERATING_SYSTEMS,
   SCMs,
   WEB_SERVERS,
-} from "../../../data/constants";
+} from "../../../../data/constants";
 import ContextContainer from "./ContextContainer";
 
 export default function AIContext({ formData, updateAiContext }) {
@@ -61,13 +61,13 @@ export default function AIContext({ formData, updateAiContext }) {
       transition={{ type: "spring", duration: 0.6 }}
       className="px-8 pb-12"
     >
-      <h2 className="text-2xl font-semibold text-white mb-6 text-center">
+      <h2 className="text-3xl font-bold text-white mb-3 tracking-tight text-center">
         Select Target Context
       </h2>
 
-      <p className="text-primary-100 text-sm text-center mb-8">
-        <span className="text-primary-100 font-medium">Optional</span> — helps
-        WebPatcher AI generate more accurate patch recommendations.
+      <p className="text-primary-100 text-sm max-w-lg mx-auto leading-relaxed text-center mb-8">
+        <span className="font-medium">Optional</span> — helps WebPatcher AI
+        generate more accurate patch recommendations.
       </p>
 
       <div className="flex flex-col md:flex-row gap-6">

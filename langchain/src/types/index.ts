@@ -9,7 +9,6 @@ export type {
 
 
 export interface PatchGeneratorConfig {
-    baseUrl?: string;
     model?: string;
     temperature?: number;
     timeout?: number;

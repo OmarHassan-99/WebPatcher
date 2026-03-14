@@ -1,3 +1,6 @@
+import { config } from "dotenv";
+import * as path from "path";
+config({ path: path.resolve(__dirname, "../../backend/.env") });
 import express from "express";
 import cors from "cors";
 import { PatchGenerator } from "./services/PatchGenerator";
@@ -24,7 +27,7 @@ app.get("/health", (req, res) => {
 
 app.post("/generate-patches", async (req, res) => {
     try {
-        const { findings, minRiskLevel = "Medium", context = null } = req.body;
+        const { findings, minRiskLevel = "Low", context = null } = req.body;
 
         if (!findings || !Array.isArray(findings) || findings.length === 0) {
             return res.status(400).json({
@@ -52,8 +55,6 @@ app.post("/generate-patches", async (req, res) => {
         }
 
         const startTime = Date.now();
-        console.log(`\nStarting patch generation for ${vulnerabilities.length} vulnerabilities...`);
-        console.log(`   Estimated time: ${vulnerabilities.length} - ${vulnerabilities.length * 2} minutes\n`);
 
 
         const results = await generator.generatePatches(vulnerabilities, context, (current, total, name) => {

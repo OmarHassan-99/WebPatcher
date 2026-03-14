@@ -168,7 +168,7 @@ export default function ProfilePage() {
       transition={{ type: "spring", damping: 20, stiffness: 120 }}
       className="flex justify-center mx-5 my-6 md:my-10"
     >
-      <div className="glass-card max-w-5xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
+      <div className="glass-card w-full min-h-[400px] max-w-5xl rounded-3xl p-8 flex flex-col md:flex-row gap-10">
         {/* Left Side - Nav & Avatar */}
         <ProfileSidePanel
           user={user}
@@ -178,7 +178,10 @@ export default function ProfilePage() {
         />
 
         {/* Right Side - Editable Fields */}
-        <form onSubmit={handleSubmit} className="md:w-2/3 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="md:w-2/3 space-y-6 w-full relative"
+        >
           {/* Section heading */}
           <AnimatePresence mode="popLayout">
             <Motion.h2

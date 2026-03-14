@@ -607,6 +607,67 @@ export async function setPassword(req, res) {
   }
 }
 
+export async function getGitHubRepos(req, res) {
+  try {
+    const user = await User.findById(req.session.user._id).select(
+      "+githubAccessToken",
+    );
+
+    if (!user || !user.githubAccessToken) {
+      return res.status(400).json({
+        success: false,
+        message: "No GitHub account linked. Please connect your GitHub first.",
+      });
+    }
+
+    let allRepos = [];
+    let page = 1;
+    const perPage = 100;
+
+    while (true) {
+      const response = await axios.get("https://api.github.com/user/repos", {
+        headers: { Authorization: `Bearer ${user.githubAccessToken}` },
+        params: {
+          per_page: perPage,
+          page,
+          sort: "updated",
+          affiliation: "owner",
+        },
+      });
+
+      const repos = response.data.map((repo) => ({
+        name: repo.name,
+        full_name: repo.full_name,
+        html_url: repo.html_url,
+        private: repo.private,
+        description: repo.description,
+      }));
+
+      allRepos = allRepos.concat(repos);
+
+      if (repos.length < perPage) break;
+      page++;
+    }
+
+    res.json({ success: true, repos: allRepos });
+  } catch (error) {
+    console.error("Failed to fetch GitHub repos:", error.message);
+
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        success: false,
+        message:
+          "GitHub token expired. Please re-link your GitHub account from your profile.",
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch GitHub repositories",
+    });
+  }
+}
+
 export async function deleteAccount(req, res) {
   try {
     const userId = req.session.user._id;

@@ -2,6 +2,7 @@ import ZapClient from "zaproxy";
 import axios from "axios";
 import ScanJob from "../models/scanJobModel.js";
 import { broadcastToUser, emitScanEvent } from "./socketService.js";
+import { configureAuthentication, cleanupAuth } from "./zapAuthService.js";
 
 const zapOptions = {
   apiKey: "123",
@@ -34,10 +35,12 @@ async function pollWithTimeout(
 ) {
   const startTime = Date.now();
   let sleepMs = 2000; // Start with 2s polling
+  let consecutiveErrors = 0;
 
   while (Date.now() - startTime < maxWaitMs) {
     try {
       const status = await statusCheckFn();
+      consecutiveErrors = 0; // reset on success
 
       if (onProgressFn) {
         onProgressFn(status);
@@ -48,7 +51,16 @@ async function pollWithTimeout(
         return true;
       }
     } catch (e) {
-      console.warn(`[ZapService] ${stageName} polling error:`, e?.message || e);
+      consecutiveErrors++;
+      console.warn(
+        `[ZapService] ${stageName} polling error (${consecutiveErrors}/10):`,
+        e?.message || e,
+      );
+      if (consecutiveErrors >= 10) {
+        throw new Error(
+          `ZAP API repeatedly unreachable. ZAP may have crashed (OOM) during intensive scans. Stage: ${stageName}`,
+        );
+      }
     }
 
     await sleep(sleepMs);
@@ -62,7 +74,12 @@ async function pollWithTimeout(
   return false;
 }
 
-export async function runZapScanService(targetUrl, scanJobId, userId) {
+export async function runZapScanService(
+  targetUrl,
+  scanJobId,
+  userId,
+  authConfig = null,
+) {
   console.log(`[ZapService] Starting scan for: ${targetUrl}`);
 
   await ScanJob.findByIdAndUpdate(scanJobId, {
@@ -77,9 +94,37 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
   try {
     console.log("Starting a new ZAP session to cleanup...");
     await zap.core.newSession({});
+
+    console.log("Setting ZAP mode to 'attack'...");
+    await zap.core.setMode({ mode: "attack" });
   } catch (err) {
     console.error("Failed to initialize ZAP session:", err);
     throw err;
+  }
+
+  // --- 0. Authenticated Context Setup (optional) ---
+  let authContextId = null;
+  let authUserId = null;
+  if (authConfig && authConfig.enabled) {
+    try {
+      emitScanEvent(scanJobId, "scan:stage", {
+        stage: "auth",
+        message: "Configuring authenticated scanning…",
+      });
+
+      const authResult = configureAuthentication(zap, targetUrl, authConfig);
+      authContextId = authResult.contextId;
+      authUserId = authResult.userId;
+      console.log(
+        `[ZapService] Authentication configured: context=${authContextId}, user=${authUserId}`,
+      );
+    } catch (err) {
+      console.error("[ZapService] Authentication setup failed:", err.message);
+      emitScanEvent(scanJobId, "scan:stage", {
+        stage: "auth",
+        message: `Auth setup failed: ${err.message}. Continuing unauthenticated…`,
+      });
+    }
   }
 
   // --- 1. Classic Spider ---
@@ -101,7 +146,10 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
     await zap.spider.setOptionThreadCount({ integer: 10 });
     await zap.spider.setOptionMaxDepth({ integer: 5 });
 
-    const spiderResponse = await zap.spider.scan({ url: targetUrl });
+    const spiderParams = { url: targetUrl };
+    if (authContextId) spiderParams.contextName = "auth-ctx";
+    if (authUserId) spiderParams.as_user = authUserId;
+    const spiderResponse = await zap.spider.scan(spiderParams);
     const spiderId = spiderResponse.scan;
 
     await pollWithTimeout(
@@ -141,7 +189,9 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
     await zap.ajaxSpider.setOptionEventWait({ integer: 200 }); // Wait 200ms after clicks
     await zap.ajaxSpider.setOptionReloadWait({ integer: 500 }); // Wait 500ms after page loads
 
-    await zap.ajaxSpider.scan({ url: targetUrl });
+    const ajaxSpiderParams = { url: targetUrl };
+    if (authContextId) ajaxSpiderParams.contextName = "auth-ctx";
+    await zap.ajaxSpider.scan(ajaxSpiderParams);
 
     await pollWithTimeout(
       async () => {
@@ -187,11 +237,11 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
 
   // --- 3. Active Scan ---
   try {
-    console.log("[ZapService] Configuring a fast Active scan policy...");
+    console.log("[ZapService] Starting active scan with Pen Test policy...");
 
     emitScanEvent(scanJobId, "scan:stage", {
       stage: "active_scan",
-      message: "Active scan starting…",
+      message: "Starting active scan with Pen Test policy…",
     });
 
     emitScanEvent(scanJobId, "scan:progress", {
@@ -200,35 +250,50 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
       message: "Active scan starting…",
     });
 
-    await zap.ascan.disableAllScanners({ scanpolicyname: "Default Policy" });
+    // Create the Pen Test policy if it doesn't exist, then configure it.
+    try {
+      await zap.ascan.addScanPolicy({ scanpolicyname: "Pen Test" });
+    } catch (e) {
+      // Ignored: Policy likely already exists
+    }
 
-    // Enable high-priority web vulnerability scanners (SQLi, XSS, etc)
-    // 40018: SQL Injection, 40012: Cross Site Scripting (Reflected), 40014: Cross Site Scripting (Persistent), 40016: Cross Site Scripting (Persistent) - Prime, 40017: Cross Site Scripting (Persistent) - Spider
-    await zap.ascan.enableScanners({
-      ids: "40018,40012,40014,40016,40017",
-      scanpolicyname: "Default Policy",
+    // Set aggressive attack parameters: HIGH attack strength, LOW alert threshold
+    await zap.ascan.updateScanPolicy({
+      scanpolicyname: "Pen Test",
+      attackstrength: "HIGH",
+      alertthreshold: "LOW",
     });
+
+    // Ensure all attack plugins are enabled for the Pen Test policy
+    await zap.ascan.enableAllScanners({ scanpolicyname: "Pen Test" });
 
     // Optimization: Increase concurrent scanning threads
     await zap.ascan.setOptionThreadPerHost({ integer: 5 });
 
-    const ascanResponse = await zap.ascan.scan({ url: targetUrl });
+    const ascanParams = { url: targetUrl };
+    if (authContextId) ascanParams.contextId = authContextId;
+    if (authUserId) ascanParams.as_user = authUserId;
+    const ascanResponse = await zap.ascan.scan({
+      ...ascanParams,
+      scanpolicyname: "Pen Test",
+    });
     const ascanId = ascanResponse.scan;
 
     await pollWithTimeout(
       async () => parseInt((await zap.ascan.status(ascanId)).status, 10),
       (status) => status >= 100,
       (status) => {
-        console.log(`[ZapService] Active Scan progress: ${status}%`);
+        console.log(`[ZapService] Active scan progress: ${status}%`);
         emitScanEvent(scanJobId, "scan:progress", {
           stage: "active_scan",
           percent: status,
           message: `Active scan running… ${status}%`,
         });
       },
-      15 * 60 * 1000, // 15 minute max for the active scan
-      "Active Scan",
+      30 * 60 * 1000, // 30 minute max for the active scan (Pen Test is aggressive)
+      "Active Scan (Pen Test Mode)",
     );
+    console.log("[ZapService] Scan completed");
   } catch (err) {
     console.error("[ZapService] Active scan error:", err?.message || err);
 
@@ -267,6 +332,11 @@ export async function runZapScanService(targetUrl, scanJobId, userId) {
       },
     },
   );
+
+  // Cleanup authenticated context if it was used
+  if (authContextId) {
+    await cleanupAuth(zap);
+  }
 
   return { report: alerts.data };
 }

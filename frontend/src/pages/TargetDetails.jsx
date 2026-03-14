@@ -21,9 +21,11 @@ import ComparePanel from "../components/targets/targetDetails/compare/ComparePan
 import toast from "react-hot-toast";
 import { RefreshCw } from "lucide-react";
 import ShinyText from "../react-bits/ShinyText";
+import { generateTargetSlug, extractIdFromSlug } from "../utils/slugify";
 
 export default function TargetDetailsPage() {
-  const { targetId } = useParams();
+  const { slug } = useParams();
+  const targetId = extractIdFromSlug(slug);
   const navigate = useNavigate();
   const { state } = useLocation();
   const fromNewTarget = state?.fromNewTarget ?? false;
@@ -79,7 +81,8 @@ export default function TargetDetailsPage() {
           toast.success("Re-run initiated successfully!", {
             duration: 6000,
           });
-          navigate(`/targets/${data.scanJobId}`, {
+          const newSlug = generateTargetSlug(data.scanJobId, currentScanData.targetName);
+          navigate(`/targets/${newSlug}`, {
             replace: true,
             state: { fromRerun: true },
           });

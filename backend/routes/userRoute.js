@@ -9,6 +9,7 @@ import {
   redirectToGitHubAuth,
   githubCallback,
   unlinkGitHub,
+  getGitHubRepos,
   deleteAccount,
   setPassword,
 } from "../controllers/userController.js";
@@ -26,6 +27,7 @@ userRouter.patch("/updateUserInfo", authMiddleware, updateUserInfo);
 userRouter.get("/github", redirectToGitHubAuth);
 userRouter.get("/github/callback", githubCallback);
 userRouter.patch("/github/unlink", authMiddleware, unlinkGitHub);
+userRouter.get("/github/repos", authMiddleware, getGitHubRepos);
 
 userRouter.post("/set-password", authMiddleware, setPassword);
 userRouter.post("/delete-account", authMiddleware, deleteAccount);
