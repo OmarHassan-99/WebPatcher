@@ -102,7 +102,7 @@ async function runScanInBackground(url, scanJobId, userId, githubRepoUrl) {
       "===================================================================\n",
     );
 
-    console.log(JSON.stringify(extractedReport, null, 2));
+    // console.log(JSON.stringify(extractedReport, null, 2));
     try {
       //Sent report to mapping to map files
       console.log("\nStep 2: Parsing ZAP Report...");
@@ -138,10 +138,10 @@ async function runScanInBackground(url, scanJobId, userId, githubRepoUrl) {
       );
       if (location) {
         console.log("-----------------------------------------");
-        console.log(`🎯 MATCH FOUND!`);
-        console.log(`📄 File: ${location.filePath}`);
-        console.log(`📍 Line: ${location.line}`);
-        console.log(`💻 Code: ${location.snippet}`);
+        console.log(` MATCH FOUND!`);
+        console.log(` File: ${location.filePath}`);
+        console.log(` Line: ${location.line}`);
+        // console.log(` Code: ${location.snippet}`);
         console.log("-----------------------------------------");
       } else {
         console.error("❌ Failed to map the vulnerability to code.");
