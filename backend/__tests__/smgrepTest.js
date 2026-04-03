@@ -1,43 +1,26 @@
-import zapService from '../services/zapService.js';
-import extractor from '../services/extractor.js';
-import mappingService from '../services/mappingService.js';
+import UrlMapper from '../services/UrlMapper.js'; // تأكد من المسار
 import path from 'path';
 
-async function runMasterFlowTest() {
-    console.log("🚀 Starting Master End-to-End Test...");
+async function runTest() {
+    const testRepoPath = path.resolve('../../web_patcher_storage/job_user_1_1775253662713'); // المسار اللي فيه الملفات اللي كريتناها
+    const testUrl = 'https://testgp-olive.vercel.app/api/vulnerable/users/search?email=%27';
 
-    const repoUrl = "https://github.com/Abdelrahman/vulnerable-node-app"; // ريبو تجريبي
-    const zapReportPath = path.resolve('./reports/sample_zap_report.json');
+    console.log("--- Starting Semgrep Test ---");
 
-    try {
+    // 1. تحويل الـ URL لـ Pattern
+    const pattern = UrlMapper.getRoutePattern(testUrl);
+    console.log(`Target Pattern: ${pattern}`);
 
-        const { report } = await zapService.runZapScanService(url, "dummyScanJobId");
+    // 2. تشغيل Semgrep
+    const foundFiles = UrlMapper.findFilesWithSemgrep(testRepoPath, pattern);
 
-        // الخطوة 2: تحليل ريبورت ZAP
-        console.log("\nStep 2: Parsing ZAP Report...");
-        const alerts = await extractor.extractZapReport(report, "dummyScanJobId");
-        const targetAlert = alerts.find(a => a.type === 'SQL Injection');
-        console.log(`✅ Target Alert Found: ${targetAlert.parameter} on ${targetAlert.url}`);
-
-        // الخطوة 3: عملية الـ Mapping (الربط الذكي)
-        console.log("\nStep 3: Mapping URL to Source Code...");
-        const location = await mappingService.mapAlertToCode(projectPath, targetAlert);
-
-        if (location) {
-            console.log("-----------------------------------------");
-            console.log(`🎯 MATCH FOUND!`);
-            console.log(`📄 File: ${location.filePath}`);
-            console.log(`📍 Line: ${location.line}`);
-            console.log(`💻 Code: ${location.snippet}`);
-            console.log("-----------------------------------------");
-
-        } else {
-            console.error("❌ Failed to map the vulnerability to code.");
-        }
-
-    } catch (error) {
-        console.error("💥 Master Test Failed:", error.message);
+    console.log("--- Results ---");
+    if (foundFiles.length > 0) {
+        console.log("✅ Success! Found the route in:");
+        foundFiles.forEach(f => console.log(` - ${f}`));
+    } else {
+        console.log("❌ Failed: Could not find any matching files.");
     }
 }
 
-runMasterFlowTest();
+runTest();
