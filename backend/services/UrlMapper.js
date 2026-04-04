@@ -1,57 +1,54 @@
-import fs from 'fs';
+import { execSync } from 'child_process';
 import path from 'path';
+import fs from 'fs';
 
 class UrlMapper {
     /**
-     * تنظيف الـ URL وتحويله لـ Pattern للبحث
+     * تنظيف الـ URL لاستخراج الجزء اللي هندور عليه (الـ Route)
      */
     static getRoutePattern(zapUrl) {
         try {
             const urlObj = new URL(zapUrl);
             let route = urlObj.pathname;
-            // بنشيل الأرقام ونحط مكانها wildcard بسيط للبحث
-            return route.replace(/\/\d+/g, '');
+            // تحويل /users/123 لـ /users/... عشان الـ Pattern Matching
+            // بنبدل الأرقام بـ wildcard
+            return route.replace(/\/\d+/g, '/...');
         } catch (e) {
-            return "";
+            return null;
         }
     }
 
     /**
-     * بديل Semgrep: محرك بحث داخلي بيدور في الملفات بسرعة
+     * البحث الاحترافي باستخدام Semgrep
      */
     static findFilesWithSemgrep(repoPath, routePattern) {
-        console.log(`[SearchEngine] Scanning for: ${routePattern}`);
-        const candidates = new Set();
-        // الامتدادات اللي تهمنا في الـ Backend
-        const extensions = ['.js', '.ts', '.py', '.php', '.java', '.go'];
+        try {
+            console.log(`[Semgrep] Scanning for route: ${routePattern}`);
 
-        const walk = (dir) => {
-            const files = fs.readdirSync(dir);
-            for (const file of files) {
-                const fullPath = path.join(dir, file);
-                const stat = fs.statSync(fullPath);
+            // القاعدة (Rule) اللي هنبحث بيها: بنقول لـ semgrep دور على أي مكان فيه نص يشبه الـ route
+            // --lang generic بتخلينا ندور في أي لغة (Node, Python, PHP...)
+            const command = `semgrep --lang generic --pattern "${routePattern}" ${repoPath} --json`;
 
-                if (stat.isDirectory()) {
-                    if (!['node_modules', '.git', 'dist', 'build'].includes(file)) {
-                        walk(fullPath);
-                    }
-                } else if (extensions.includes(path.extname(file))) {
-                    const content = fs.readFileSync(fullPath, 'utf8');
-                    // بنشوف لو المسار (الـ Route) مكتوب جوه الكود بأي صيغة
-                    if (content.includes(routePattern) || content.includes(routePattern.replace(/\//g, '\\/'))) {
-                        candidates.add(fullPath);
-                    }
+            const output = execSync(command, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+            const results = JSON.parse(output);
+
+            // استخراج مسارات الملفات الفريدة اللي طلع فيها الـ pattern
+            const files = results.results.map(r => path.resolve(r.path));
+            return [...new Set(files)];
+
+        } catch (error) {
+            // Semgrep أحياناً بيرجع exit code 1 لو لقى نتائج، فبنعمل parse للـ stdout حتى لو فيه error
+            if (error.stdout) {
+                try {
+                    const results = JSON.parse(error.stdout);
+                    return [...new Set(results.results.map(r => path.resolve(r.path)))];
+                } catch (e) {
+                    return [];
                 }
             }
-        };
-
-        try {
-            walk(repoPath);
-        } catch (err) {
-            console.error("[SearchEngine] Error walking directory:", err.message);
+            console.error("[Semgrep] Error:", error.message);
+            return [];
         }
-
-        return Array.from(candidates);
     }
 }
 
