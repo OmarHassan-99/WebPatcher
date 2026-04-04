@@ -125,12 +125,12 @@ async function runScanInBackground(
     );
 
     const extractedReport = await extractZapReport(report, scanJobId);
+    console.log(extractedReport);
 
-    console.log(
-      "===================================================================\n",
-    );
+    console.log("===================================================================\n");
+
     // --- START: Source Code Mapping Logic ---
-    if (githubRepoUrl) {
+    if (githubRepoUrl && extractedReport && extractedReport.length > 0) {
       try {
         console.log("[ScanController] Starting repository download and source mapping...");
         const downloader = new RepoDownloader();
@@ -138,29 +138,42 @@ async function runScanInBackground(
         const projectStructure = generateFileTreeForAI(localRepoPath);
         const aiDecisionMaker = new DecisionMaker(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
 
-        for (let finding of findings) {
-          const routePattern = UrlMapper.getRoutePattern(finding.affected_url);
-          const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+        for (let finding of extractedReport) {
+          console.log(`[Mapping] Processing Alert Type: ${finding.alertName}`);
 
-          if (candidates.length > 0) {
-            const aiResult = await aiDecisionMaker.identifyInfectedFile(
-              { url: finding.affected_url, type: finding.alert_name, parameter: finding.parameter || "N/A" },
-              candidates,
-              projectStructure
-            );
-            finding.source_file_path = aiResult.selected_file;
-            console.log(`[ScanController] Mapped ${finding.alert_name} to ${finding.source_file_path}`);
+          for (let instance of finding.instances) {
+            const routePattern = UrlMapper.getRoutePattern(instance.uri);
+            const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+
+            if (candidates.length > 0) {
+              const aiResult = await aiDecisionMaker.identifyInfectedFile(
+                {
+                  url: instance.uri,
+                  type: finding.alertName,
+                  parameter: instance.param || "N/A"
+                },
+                candidates,
+                projectStructure
+              );
+
+              instance.source_file_path = aiResult.selected_file;
+              console.log(`   [Mapped] URL: ${instance.uri} -> File: ${instance.source_file_path}`);
+            }
           }
         }
+
+        await ScanReport.findOneAndUpdate(
+          { scanJob: scanJobId },
+          { $set: { findings: extractedReport } }
+        );
+
       } catch (mappingError) {
-        console.error("[ScanController] Mapping process failed, proceeding with original findings:", mappingError.message);
+        console.error("[ScanController] Mapping process failed:", mappingError.message);
       }
     }
     // --- END: Source Code Mapping Logic ---
 
-    console.log(
-      "===================================================================\n",
-    );
+    console.log("===================================================================\n");
 
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
