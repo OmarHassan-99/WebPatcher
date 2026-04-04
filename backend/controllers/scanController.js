@@ -17,9 +17,11 @@ import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 import { testAuthentication } from "../services/zapAuthService.js";
 import ZapClient from "zaproxy";
 
-import mappingService from "../services/mappingService.js";
-import RepoDownloader from "../services/githubService.js";
-const Downloader = new RepoDownloader();
+// استدعاء الخدمات الجديدة
+import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
+import UrlMapper from '../services/UrlMapper.js';
+import DecisionMaker from '../services/getInfectedFiles.js';
+import path from 'path';
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -124,60 +126,6 @@ async function runScanInBackground(
 
     const extractedReport = await extractZapReport(report, scanJobId);
 
-    console.log(
-      "===================================================================\n",
-    );
-
-    // console.log(JSON.stringify(extractedReport, null, 2));
-    try {
-      //Sent report to mapping to map files
-      console.log("\nStep 2: Parsing ZAP Report...");
-      const alerts = extractedReport;
-
-      //cloning repo
-      const repoPath = await Downloader.downloadSourceCode(
-        githubRepoUrl,
-        "user_1",
-      );
-      console.log(`✅ Repo cloned to: ${repoPath}`);
-
-      const rawAlert = alerts.find((a) => a.alertName === "SQL Injection");
-      console.log(
-        `✅ Target Alert Found: ${rawAlert.alertName} on ${rawAlert.instances[0].uri}`,
-      );
-
-      const targetAlert = {
-        type: rawAlert.alertName,
-        url: rawAlert.instances[0].uri, // ZAP بيبعت URI جوه instances
-        parameter: rawAlert.instances[0].param || "", // ZAP بيبعت param وليس parameter
-        evidence: rawAlert.instances[0].evidence || "",
-      };
-
-      console.log(
-        `✅ Normalized Alert: Searching for "${targetAlert.parameter}" on ${targetAlert.url}`,
-      );
-      // mapping
-      console.log("\nStep 3: Mapping URL to Source Code...");
-      const location = await mappingService.mapAlertToCode(
-        repoPath,
-        targetAlert,
-      );
-      if (location) {
-        console.log("-----------------------------------------");
-        console.log(` MATCH FOUND!`);
-        console.log(` File: ${location.filePath}`);
-        console.log(` Line: ${location.line}`);
-        // console.log(` Code: ${location.snippet}`);
-        console.log("-----------------------------------------");
-      } else {
-        console.error("❌ Failed to map the vulnerability to code.");
-      }
-    } catch (error) {
-      console.error("💥 Master Test Failed:", error.message);
-    }
-    console.log(
-      "===================================================================\n",
-    );
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
     generatePatchesInBackground(extractedReport, scanJobId, userId);
@@ -249,6 +197,36 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
     // Retrieve scan context to pass to LLM
     const scan = await ScanJob.findById(scanJobId).lean();
     const context = scan?.context || null;
+    const githubRepoUrl = scan?.githubRepoUrl;
+
+    // --- START: Source Code Mapping Logic ---
+    if (githubRepoUrl) {
+      try {
+        console.log("[ScanController] Starting repository download and source mapping...");
+        const downloader = new RepoDownloader();
+        const localRepoPath = await downloader.downloadSourceCode(githubRepoUrl, userId);
+        const projectStructure = generateFileTreeForAI(localRepoPath);
+        const aiDecisionMaker = new DecisionMaker(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
+
+        for (let finding of findings) {
+          const routePattern = UrlMapper.getRoutePattern(finding.affected_url);
+          const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+
+          if (candidates.length > 0) {
+            const aiResult = await aiDecisionMaker.identifyInfectedFile(
+              { url: finding.affected_url, type: finding.alert_name, parameter: finding.parameter || "N/A" },
+              candidates,
+              projectStructure
+            );
+            finding.source_file_path = aiResult.selected_file;
+            console.log(`[ScanController] Mapped ${finding.alert_name} to ${finding.source_file_path}`);
+          }
+        }
+      } catch (mappingError) {
+        console.error("[ScanController] Mapping process failed, proceeding with original findings:", mappingError.message);
+      }
+    }
+    // --- END: Source Code Mapping Logic ---
 
     const patchResult = await generatePatchesForFindings(
       findings,
@@ -270,8 +248,8 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
           patchNum++;
           successCount++;
           console.log(`\n [${patchNum}] ${patchData.vulnerability.alert_name}`);
-          console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
-          console.log(`   URL: ${patchData.vulnerability.affected_url}`);
+          console.log(`   Risk: ${patchData.vulnerability.risk_level}`);
+          console.log(`   URL: ${patchData.vulnerability.affected_url}`);
           console.log("-".repeat(60));
 
           try {
@@ -282,7 +260,7 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
             );
           } catch (dbErr) {
             console.error(
-              `   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`,
+              `   [ScanController] Failed to save recommendation to DB: ${dbErr.message}`,
             );
           }
 
@@ -297,7 +275,7 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
           console.log(
             `\n FAILED: ${patchData.vulnerability?.alert_name || "Unknown"}`,
           );
-          console.log(`   Error: ${patchData.error}`);
+          console.log(`   Error: ${patchData.error}`);
 
           emitScanEvent(scanJobId, "scan:patch", {
             index: index + 1,
@@ -341,7 +319,6 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
       "[ScanController] Background patch generation error:",
       error.message,
     );
-
     // uncomment the following if we want to update the scan status to failed if the patch generation fails
     // await ScanJob.findByIdAndUpdate(scanJobId, {
     //   $set: { status: "failed", finishedAt: Date.now() },
@@ -350,7 +327,6 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
     //   scanJobId: scanJobId.toString(),
     //   status: "failed",
     // });
-
     emitScanEvent(scanJobId, "scan:error", { message: error.message });
   }
 }
