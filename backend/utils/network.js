@@ -22,21 +22,23 @@ export async function isHostReachable(rawUrl, timeout = 6000) {
       maxRedirects: 5,
       httpAgent,
       httpsAgent,
-      validateStatus: null,
+      validateStatus: null, // prevents axios from throwing an error on 4xx
     });
 
     try {
       //hytcheck el head elawl
       const headResp = await instance.head(rawUrl);
       const status = headResp.status;
-      const ok = status >= 200 && status < 400;
+      const ok =
+        (status >= 200 && status < 400) || status === 401 || status === 403;
       return { ok, status, method: "HEAD" };
     } catch {
       try {
         //hytcheck el get fallback
         const getResp = await instance.get(rawUrl);
         const status = getResp.status;
-        const ok = status >= 200 && status < 400;
+        const ok =
+          (status >= 200 && status < 400) || status === 401 || status === 403;
         return { ok, status, method: "GET" };
       } catch (getErr) {
         return {
