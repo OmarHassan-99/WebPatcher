@@ -1,25 +1,30 @@
 import 'dotenv/config.js';
 import RepoDownloader from '../services/githubService.js';
-import { generateFileTree } from '../services/githubService.js';
+import { generateFileTreeVisual, generateFileTreeForAI } from '../services/githubService.js';
 import PRService from '../services/pullRequestGithub.js';
 import fs from 'fs';
 import path from 'path';
 const downloader = new RepoDownloader();
 const prService = new PRService(process.env.GITHUB_TEST_TOKEN);
 
-const repoUrl = 'https://github.com/Abdelrahman339/QuickBite.git';
+const repoUrl = 'https://github.com/abdullah12q/testgp';
 const repoOwner = 'Abdelrahman339';
-const repoName = 'QuickBite';
+const repoName = 'testGP    ';
 
 async function startFullFlow() {
     try {
         const repoPath = await downloader.downloadSourceCode(repoUrl, 'user_1');
 
 
-        console.log('\nGenerating Project File Tree:');
+        console.log('\nGenerating Project File Tree: (USER)');
         console.log('---------------------------------');
-        const tree = generateFileTree(repoPath);
+        const tree = generateFileTreeVisual(repoPath);
         console.log(tree);
+        console.log('---------------------------------');
+        console.log('\nGenerating Project File Tree: (AI)');
+        console.log('---------------------------------');
+        const treeAI = generateFileTreeForAI(repoPath);
+        console.log(treeAI);
         console.log('---------------------------------');
 
 

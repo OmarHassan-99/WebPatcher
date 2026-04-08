@@ -143,6 +143,39 @@ app.post("/generate-patch", async (req, res) => {
 });
 
 
+app.post("/patch-file", async (req, res) => {
+    try {
+        const { fileName, content } = req.body;
+
+        if (!fileName || !content) {
+            return res.status(400).json({
+                success: false,
+                error: "Invalid request: must provide both fileName and content",
+            });
+        }
+
+        logger.info(`[LangChain API] Patching full file: ${fileName}`);
+
+        const patchedContent = await generator.patchFile(fileName, content);
+
+        logger.info(`[LangChain API] Full file patching complete: ${fileName}`);
+
+        res.json({
+            success: true,
+            fileName,
+            patchedContent,
+        });
+
+    } catch (error) {
+        logger.error("[LangChain API] Error patching full file", error);
+        res.status(500).json({
+            success: false,
+            error: error instanceof Error ? error.message : "Unknown error",
+        });
+    }
+});
+
+
 const server = app.listen(PORT, () => {
     logger.info(`[LangChain API] Server running on http://localhost:${PORT}`);
     console.log(`\nLangChain Patch Generator API`);

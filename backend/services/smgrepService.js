@@ -38,7 +38,7 @@ class SemgrepService {
         const template = langConfigs[type] || langConfigs['Generic'];
         const pattern = template.replace('${param}', parameter);
 
-        console.log(`🚀 Executing Dynamic Scan: [Lang: ${language}] [Pattern: ${pattern}]`);
+        // console.log(` Executing Dynamic Scan: [Lang: ${language}] [Pattern: ${pattern}]`);
 
         try {
 
@@ -46,7 +46,7 @@ class SemgrepService {
 
 
             if (results.length === 0) {
-                console.log(` Semantic match failed. Trying Generic String Search for: ${parameter}`);
+                // console.log(` Semantic match failed. Trying Generic String Search for: ${parameter}`);
                 results = await this.runSemgrep(normalizedPath, 'generic', parameter);
             }
 

@@ -6,10 +6,10 @@
  */
 
 /** Maximum tokens allowed in a single prompt (system + human messages). */
-export const MAX_PROMPT_TOKENS = 2000;
+export const MAX_PROMPT_TOKENS = 4096;
 
 /** Maximum tokens the model may return in a single response. */
-export const MAX_RESPONSE_TOKENS = 1200;
+export const MAX_RESPONSE_TOKENS = 4096;
 
 /**
  * Estimate the number of tokens in a given text.

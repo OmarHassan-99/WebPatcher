@@ -231,6 +231,86 @@ Description: {description}
         }
     }
 
+    /**
+     * Performs full-file security remediation.
+     * Takes the content of a file and returns a secure, production-ready version of the FULL file.
+     *
+     * @param fileName - The name of the file being patched
+     * @param content - The original content of the file
+     * @returns The patched content as a string
+     */
+    async patchFile(fileName: string, content: string): Promise<string> {
+        await this.llmProvider.initialize();
+
+        const systemPrompt = `Act as a Senior Application Security Engineer and secure code remediation expert.
+
+Your task is to FIX vulnerabilities while STRICTLY preserving the original behavior.
+
+CRITICAL RULES:
+1. Return ONLY the full updated file content.
+2. DO NOT include explanations, comments about changes, or markdown code blocks.
+3. DO NOT truncate, summarize, or omit any part of the file.
+4. The output MUST be a complete, runnable file.
+
+LOGIC PRESERVATION (VERY IMPORTANT):
+- DO NOT change the application's logic, flow, or functionality.
+- DO NOT remove features unless they are inherently insecure and must be replaced with a secure equivalent.
+- If replacing insecure code, ensure the new code produces the SAME functional outcome.
+- Maintain function names, routes, APIs, and structure unless absolutely necessary for security.
+
+SECURITY REQUIREMENTS:
+- Fix real vulnerabilities (SQL injection, XSS, command injection, path traversal, etc.)
+- Sanitize and validate all external inputs
+- Replace insecure APIs with secure alternatives (e.g., prepared statements)
+- Avoid introducing new vulnerabilities
+
+CODE QUALITY:
+- Ensure syntax is correct and consistent
+- Keep code clean and production-ready
+- Do NOT leave placeholders, TODOs, or incomplete fixes
+
+STRICT VERIFICATION BEFORE OUTPUT:
+- Ensure the output is NOT identical to the input if vulnerabilities exist
+- Ensure the file is COMPLETE (no missing parts)
+- Ensure logic is preserved and still functional
+
+FINAL OUTPUT:
+Return ONLY the patched code as plain text.`;
+
+        const humanPrompt = `You are given a source code file.
+
+File Name: ${fileName}
+
+Code:
+${content}
+
+Task:
+Fix all security vulnerabilities while STRICTLY preserving functionality and behavior.
+
+IMPORTANT:
+- Do NOT break or alter logic
+- Do NOT remove working features
+- Do NOT shorten the file
+- Return the FULL file with secure fixes applied
+
+Return ONLY the updated code.`;
+        try {
+            const result = await this.llmProvider.invokeWithFallback(async (llm) => {
+                const response = await llm.invoke([
+                    ["system", systemPrompt],
+                    ["human", humanPrompt]
+                ]);
+                return response.content as string;
+            });
+
+            // Clean up any accidental markdown blocks if the LLM ignores instructions
+            return result.replace(/^```(?:\w+)?\n/, "").replace(/\n```$/, "").trim();
+        } catch (error) {
+            logger.error(`[PatchGenerator] Failed to patch file ${fileName}:`, error);
+            throw error;
+        }
+    }
+
     async generatePatches(
         vulnerabilities: VulnerabilityInput[],
         context?: any,

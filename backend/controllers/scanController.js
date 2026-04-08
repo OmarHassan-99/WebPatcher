@@ -17,9 +17,12 @@ import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 import { testAuthentication } from "../services/zapAuthService.js";
 import ZapClient from "zaproxy";
 
-import mappingService from "../services/mappingService.js";
-import RepoDownloader from "../services/githubService.js";
-const Downloader = new RepoDownloader();
+// استدعاء الخدمات الجديدة
+import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
+import UrlMapper from '../services/UrlMapper.js';
+import DecisionMaker from '../services/DecisionMaker.js';
+import { localPatchService } from '../services/localPatchService.js';
+
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -123,61 +126,60 @@ async function runScanInBackground(
     );
 
     const extractedReport = await extractZapReport(report, scanJobId);
+    console.log(extractedReport);
 
-    console.log(
-      "===================================================================\n",
-    );
+    console.log("===================================================================\n");
 
-    console.log(JSON.stringify(extractedReport, null, 2));
-    try {
-      //Sent report to mapping to map files
-      console.log("\nStep 2: Parsing ZAP Report...");
-      const alerts = extractedReport;
+    // --- START: Source Code Mapping Logic ---
+    if (githubRepoUrl && extractedReport && extractedReport.length > 0) {
+      try {
+        console.log("[ScanController] Starting repository download and source mapping...");
+        const downloader = new RepoDownloader();
+        const localRepoPath = await downloader.downloadSourceCode(githubRepoUrl, userId);
+        const projectStructure = generateFileTreeForAI(localRepoPath);
+        const aiDecisionMaker = new DecisionMaker(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
 
-      //cloning repo
-      const repoPath = await Downloader.downloadSourceCode(
-        githubRepoUrl,
-        "user_1",
-      );
-      console.log(`✅ Repo cloned to: ${repoPath}`);
+        for (let finding of extractedReport) {
+          console.log(`[Mapping] Processing Alert Type: ${finding.alertName}`);
 
-      const rawAlert = alerts.find((a) => a.alertName === "SQL Injection");
-      console.log(
-        `✅ Target Alert Found: ${rawAlert.alertName} on ${rawAlert.instances[0].uri}`,
-      );
+          for (let instance of finding.instances) {
+            const routePattern = UrlMapper.getRoutePattern(instance.uri);
+            console.log(`   [RoutePattern] Extracted pattern: ${routePattern} from URL: ${instance.uri}`);
+            const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+            console.log(`   [Candidates] Found ${candidates.length} candidate file(s) for pattern: ${routePattern}`);
+            if (candidates.length === 1) {
+              console.log(`candidate: ${candidates[0]} : sent to LLM`);
+            }
+            else if (candidates.length > 0) {
+              const aiResult = await aiDecisionMaker.identifyInfectedFile(
+                {
+                  url: instance.uri,
+                  type: finding.alertName,
+                  parameter: instance.param || "N/A"
+                },
+                candidates,
+                projectStructure
+              );
 
-      const targetAlert = {
-        type: rawAlert.alertName,
-        url: rawAlert.instances[0].uri, // ZAP بيبعت URI جوه instances
-        parameter: rawAlert.instances[0].param || "", // ZAP بيبعت param وليس parameter
-        evidence: rawAlert.instances[0].evidence || "",
-      };
+              instance.source_file_path = aiResult.selected_file;
+              console.log(`   [Mapped] URL: ${instance.uri} -> File: ${instance.source_file_path}`);
+            }
+          }
+        }
 
-      console.log(
-        `✅ Normalized Alert: Searching for "${targetAlert.parameter}" on ${targetAlert.url}`,
-      );
-      // mapping
-      console.log("\nStep 3: Mapping URL to Source Code...");
-      const location = await mappingService.mapAlertToCode(
-        repoPath,
-        targetAlert,
-      );
-      if (location) {
-        console.log("-----------------------------------------");
-        console.log(`🎯 MATCH FOUND!`);
-        console.log(`📄 File: ${location.filePath}`);
-        console.log(`📍 Line: ${location.line}`);
-        console.log(`💻 Code: ${location.snippet}`);
-        console.log("-----------------------------------------");
-      } else {
-        console.error("❌ Failed to map the vulnerability to code.");
+        await ScanReport.findOneAndUpdate(
+          { scanJob: scanJobId },
+          { $set: { findings: extractedReport } }
+        );
+
+      } catch (mappingError) {
+        console.error("[ScanController] Mapping process failed:", mappingError.message);
       }
-    } catch (error) {
-      console.error("💥 Master Test Failed:", error.message);
     }
-    console.log(
-      "===================================================================\n",
-    );
+    // --- END: Source Code Mapping Logic ---
+
+    console.log("===================================================================\n");
+
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
     generatePatchesInBackground(extractedReport, scanJobId, userId);
@@ -312,6 +314,16 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
       console.log("\n" + "=".repeat(80));
       console.log(` ${successCount}/${total} patches generated successfully`);
       console.log("=".repeat(80) + "\n");
+
+
+      // CODE PATCH
+      try {
+        console.log("[ScanController] Starting local storage file patching...");
+        // This will process all files in storage
+        await localPatchService.patchLocalFiles();
+      } catch (localErr) {
+        console.error(`[ScanController] Local storage patching failed: ${localErr.message}`);
+      }
 
       await ScanJob.findByIdAndUpdate(scanJobId, {
         $set: { status: "completed", finishedAt: Date.now() },
