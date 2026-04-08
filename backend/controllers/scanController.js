@@ -21,6 +21,7 @@ import ZapClient from "zaproxy";
 import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
 import UrlMapper from '../services/UrlMapper.js';
 import DecisionMaker from '../services/DecisionMaker.js';
+import { localPatchService } from '../services/localPatchService.js';
 
 
 export async function validateTargetAndRepoURLs(req, res) {
@@ -309,6 +310,16 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
       console.log("\n" + "=".repeat(80));
       console.log(` ${successCount}/${total} patches generated successfully`);
       console.log("=".repeat(80) + "\n");
+
+
+      // CODE PATCH
+      try {
+        console.log("[ScanController] Starting local storage file patching...");
+        // This will process all files in storage
+        await localPatchService.patchLocalFiles();
+      } catch (localErr) {
+        console.error(`[ScanController] Local storage patching failed: ${localErr.message}`);
+      }
 
       await ScanJob.findByIdAndUpdate(scanJobId, {
         $set: { status: "completed", finishedAt: Date.now() },
