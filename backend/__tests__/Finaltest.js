@@ -1,6 +1,6 @@
 import RepoDownloader from '../services/githubService.js';
 import UrlMapper from '../services/UrlMapper.js';
-import DecisionMaker from '../services/getInfectedFiles.js';
+import DecisionMaker from '../services/DecisionMaker.js';
 import dotenv from 'dotenv';
 import path from 'path';
 import fs from 'fs';
@@ -14,8 +14,8 @@ async function runFullIntegrationTest() {
 
     // بيانات التيست (استبدلها بريبو حقيقي بسيط عندك للتجربة)
     const testConfig = {
-        repoUrl: "https://github.com/abdullah12q/testgp", // ريبو تجريبي
-        zapUrl: "https://testgp-olive.vercel.app/api/vulnerable/users/search?email=%27",
+        repoUrl: "https://github.com/Abdelrahman339/Vulnerable-Web-Application", // ريبو تجريبي
+        zapUrl: "http://vwa-target.com/homepage.html",
         userId: "test_user_001",
         apiKey: process.env.OPENAI_API_KEY
     };
@@ -41,7 +41,7 @@ async function runFullIntegrationTest() {
         console.log(`Pattern generated: ${routePattern}`);
 
         const candidates = UrlMapper.findFilesWithSemgrep(localPath, routePattern);
-
+        // candidates.push("test.php");
         if (candidates.length > 0) {
             console.log(`✅ Success: Semgrep found ${candidates.length} candidates:`);
             candidates.forEach(c => console.log(`   - ${path.basename(c)}`));

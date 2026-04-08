@@ -143,9 +143,13 @@ async function runScanInBackground(
 
           for (let instance of finding.instances) {
             const routePattern = UrlMapper.getRoutePattern(instance.uri);
+            console.log(`   [RoutePattern] Extracted pattern: ${routePattern} from URL: ${instance.uri}`);
             const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
-
-            if (candidates.length > 0) {
+            console.log(`   [Candidates] Found ${candidates.length} candidate file(s) for pattern: ${routePattern}`);
+            if (candidates.length === 1) {
+              console.log(`candidate: ${candidates[0]} : sent to LLM`);
+            }
+            else if (candidates.length > 0) {
               const aiResult = await aiDecisionMaker.identifyInfectedFile(
                 {
                   url: instance.uri,
