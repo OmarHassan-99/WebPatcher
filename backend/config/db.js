@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import "dotenv/config.js";
+import "./env.js";
 
 export default async function connectDB() {
   await mongoose

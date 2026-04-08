@@ -7,8 +7,8 @@ class DecisionMaker {
     constructor(apiKey) {
         // إعداد OpenRouter مع موديل قوي زي Claude 3.5 Sonnet
         this.model = new ChatOpenAI({
-            openAIApiKey: apiKey,
-            modelName: "qwen/qwen3.6-plus:free", // أو gpt-4o
+            apiKey,
+            modelName: "qwen/qwen3.6-plus", // أو gpt-4o
             configuration: {
                 baseURL: "https://openrouter.ai/api/v1",
             }

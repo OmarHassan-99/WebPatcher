@@ -1,3 +1,4 @@
+import "./config/env.js";
 import express from "express";
 import cors from "cors";
 import http from "http";
@@ -12,8 +13,6 @@ import { initSocketIO } from "./services/socketService.js";
 import userRouter from "./routes/userRoute.js";
 import scanRouter from "./routes/scanRoutes.js";
 import recommendationRouter from "./routes/recommendationRoutes.js";
-
-import "dotenv/config.js";
 
 const FRONT_END_ORIGIN = process.env.FRONT_END_ORIGIN;
 const MONGODB_URI = process.env.MONGODB_URI;

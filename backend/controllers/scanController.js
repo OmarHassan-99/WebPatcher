@@ -21,6 +21,12 @@ import ZapClient from "zaproxy";
 import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
 import UrlMapper from '../services/UrlMapper.js';
 import DecisionMaker from '../services/DecisionMaker.js';
+import { generateAndWriteOpenapiYaml } from "../services/openapiService.js";
+import { validateOpenapiWithSwaggerCli } from "../services/openapiValidationService.js";
+import {
+  defaultSchemathesisReportPath,
+  runSchemathesisHarReport,
+} from "../services/schemathesisService.js";
 
 
 export async function validateTargetAndRepoURLs(req, res) {
@@ -75,6 +81,13 @@ export async function startZapScan(req, res) {
 
   try {
     console.log(`[ScanController] Received request to scan URL: ${url}`);
+    console.log(
+      `[ScanController] GitHub repo URL: ${
+        githubRepoUrl && String(githubRepoUrl).trim() !== ""
+          ? githubRepoUrl
+          : "(none)"
+      }`,
+    );
 
     if (previousScanId) {
       // Hide the previous scan from the Target list UI
@@ -116,59 +129,232 @@ async function runScanInBackground(
   githubRepoUrl,
   authConfig = null,
 ) {
+  let openapiTask = Promise.resolve(null);
   try {
-    const { report } = await runZapScanService(
-      url,
-      scanJobId,
-      userId,
-      authConfig,
-    );
+    if (!githubRepoUrl || githubRepoUrl.trim() === "") {
+      console.log(
+        "[ScanController] No githubRepoUrl provided — skipping repo download + OpenAPI generation.",
+      );
+    }
 
-    const extractedReport = await extractZapReport(report, scanJobId);
+    // Kick off repo download + OpenAPI generation in parallel with ZAP scanning.
+    // This way, `Openapi.yaml` is produced sooner for later API-testing steps.
+    let localRepoPath = null;
+    const downloadTask =
+      githubRepoUrl && githubRepoUrl.trim() !== ""
+        ? (async () => {
+            try {
+              console.log(
+                "[ScanController] Downloading repository for OpenAPI + mapping...",
+              );
+              const downloader = new RepoDownloader();
+              return await downloader.downloadSourceCode(
+                githubRepoUrl,
+                userId,
+              );
+            } catch (downloadErr) {
+              console.error(
+                "[ScanController] Repository download failed:",
+                downloadErr.message || downloadErr,
+              );
+              return null;
+            }
+          })()
+        : Promise.resolve(null);
+
+    // Start OpenAPI generation as soon as the download finishes, but do not
+    // block mapping on it.
+    openapiTask = downloadTask.then(async (repoPath) => {
+      if (!repoPath) return null;
+      try {
+        const { outputPath } = await generateAndWriteOpenapiYaml({
+          repoPath,
+          targetUrl: url,
+        });
+
+        const validation = validateOpenapiWithSwaggerCli(outputPath);
+
+        await ScanJob.findByIdAndUpdate(scanJobId, {
+          $set: {
+            openapiFilePath: outputPath,
+            openapiValidation: {
+              status: validation.ok
+                ? "valid"
+                : validation.error?.includes("execute swagger-cli")
+                  ? "error"
+                  : "invalid",
+              error: validation.ok ? undefined : validation.error,
+              validatedAt: new Date(),
+            },
+          },
+        });
+
+        if (validation.ok) {
+          console.log("[ScanController] OpenAPI validation: valid");
+
+          // Kick off Schemathesis API testing (HAR is JSON).
+          // This is async and will update the scan record when it finishes.
+          const reportPath = defaultSchemathesisReportPath(repoPath);
+          await ScanJob.findByIdAndUpdate(scanJobId, {
+            $set: {
+              schemathesis: {
+                status: "running",
+                reportPath,
+                ranAt: new Date(),
+              },
+            },
+          });
+
+          try {
+            const child = runSchemathesisHarReport({
+              openapiPath: outputPath,
+              baseUrl: url,
+              reportPath,
+            });
+
+            child.on("exit", async (code) => {
+              const ok = code === 0;
+              await ScanJob.findByIdAndUpdate(scanJobId, {
+                $set: {
+                  schemathesis: {
+                    status: ok ? "passed" : "failed",
+                    reportPath,
+                    exitCode: code ?? 1,
+                    finishedAt: new Date(),
+                  },
+                },
+              });
+            });
+
+            child.on("error", async (err) => {
+              await ScanJob.findByIdAndUpdate(scanJobId, {
+                $set: {
+                  schemathesis: {
+                    status: "error",
+                    reportPath,
+                    exitCode: 1,
+                    error: err?.message || String(err),
+                    finishedAt: new Date(),
+                  },
+                },
+              });
+            });
+          } catch (err) {
+            await ScanJob.findByIdAndUpdate(scanJobId, {
+              $set: {
+                schemathesis: {
+                  status: "error",
+                  reportPath,
+                  exitCode: 1,
+                  error: err?.message || String(err),
+                  finishedAt: new Date(),
+                },
+              },
+            });
+          }
+        } else {
+          console.error(
+            "[ScanController] OpenAPI validation failed:",
+            validation.error,
+          );
+        }
+      } catch (openapiErr) {
+        console.error(
+          "[ScanController] OpenAPI generation failed:",
+          openapiErr.message || openapiErr,
+        );
+      }
+      return repoPath;
+    });
+
+    const skipZap = String(process.env.SKIP_ZAP || "").toLowerCase() === "true";
+
+    let extractedReport = [];
+    if (skipZap) {
+      console.log(
+        "[ScanController] SKIP_ZAP=true — skipping ZAP scan and running OpenAPI-only flow.",
+      );
+      // Ensure OpenAPI generation has a chance to finish; mapping/patching rely on ZAP findings.
+      await openapiTask;
+
+      await ScanJob.findByIdAndUpdate(scanJobId, {
+        $set: { status: "completed", finishedAt: Date.now() },
+      });
+      broadcastToUser(userId, "scan:status", {
+        scanJobId: scanJobId.toString(),
+        status: "completed",
+      });
+      emitScanEvent(scanJobId, "scan:complete", {
+        stage: "done",
+        successCount: 0,
+        total: 0,
+        message: "OpenAPI generated (ZAP skipped)",
+      });
+      return;
+    }
+
+    const { report } = await runZapScanService(url, scanJobId, userId, authConfig);
+
+    extractedReport = await extractZapReport(report, scanJobId);
     console.log(extractedReport);
 
     console.log("===================================================================\n");
 
     // --- START: Source Code Mapping Logic ---
-    if (githubRepoUrl && extractedReport && extractedReport.length > 0) {
+    localRepoPath = await downloadTask;
+    if (
+      githubRepoUrl &&
+      githubRepoUrl.trim() !== "" &&
+      extractedReport &&
+      extractedReport.length > 0 &&
+      localRepoPath
+    ) {
       try {
-        console.log("[ScanController] Starting repository download and source mapping...");
-        const downloader = new RepoDownloader();
-        const localRepoPath = await downloader.downloadSourceCode(githubRepoUrl, userId);
         const projectStructure = generateFileTreeForAI(localRepoPath);
-        const aiDecisionMaker = new DecisionMaker(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
+        const aiDecisionMaker = new DecisionMaker(
+          process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY,
+        );
 
         for (let finding of extractedReport) {
-          console.log(`[Mapping] Processing Alert Type: ${finding.alertName}`);
+          console.log(
+            `[Mapping] Processing Alert Type: ${finding.alertName}`,
+          );
 
           for (let instance of finding.instances) {
             const routePattern = UrlMapper.getRoutePattern(instance.uri);
-            const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+            const candidates = UrlMapper.findFilesWithSemgrep(
+              localRepoPath,
+              routePattern,
+            );
 
             if (candidates.length > 0) {
               const aiResult = await aiDecisionMaker.identifyInfectedFile(
                 {
                   url: instance.uri,
                   type: finding.alertName,
-                  parameter: instance.param || "N/A"
+                  parameter: instance.param || "N/A",
                 },
                 candidates,
-                projectStructure
+                projectStructure,
               );
 
               instance.source_file_path = aiResult.selected_file;
-              console.log(`   [Mapped] URL: ${instance.uri} -> File: ${instance.source_file_path}`);
+              console.log(
+                `   [Mapped] URL: ${instance.uri} -> File: ${instance.source_file_path}`,
+              );
             }
           }
         }
 
         await ScanReport.findOneAndUpdate(
           { scanJob: scanJobId },
-          { $set: { findings: extractedReport } }
+          { $set: { findings: extractedReport } },
         );
-
       } catch (mappingError) {
-        console.error("[ScanController] Mapping process failed:", mappingError.message);
+        console.error(
+          "[ScanController] Mapping process failed:",
+          mappingError.message,
+        );
       }
     }
     // --- END: Source Code Mapping Logic ---
@@ -180,6 +366,17 @@ async function runScanInBackground(
     generatePatchesInBackground(extractedReport, scanJobId, userId);
   } catch (error) {
     console.error("[ScanController] Background scan error:", error);
+
+    // Even if ZAP fails, we still want the OpenAPI pipeline to finish (if started),
+    // so the user can use the generated spec & test reports.
+    try {
+      await openapiTask;
+    } catch (e) {
+      console.error(
+        "[ScanController] OpenAPI task failed while handling scan error:",
+        e?.message || e,
+      );
+    }
 
     await ScanJob.findByIdAndUpdate(scanJobId, {
       $set: { status: "failed", finishedAt: Date.now() },

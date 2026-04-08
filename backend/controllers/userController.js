@@ -4,7 +4,7 @@ import validator from "validator";
 import axios from "axios";
 import crypto from "crypto";
 
-import "dotenv/config.js";
+import "../config/env.js";
 import ScanJob from "../models/scanJobModel.js";
 import ScanReport from "../models/ScanReportModel.js";
 import ScanRecommendation from "../models/ScanRecommendationModel.js";
