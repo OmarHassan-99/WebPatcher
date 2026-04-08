@@ -8,7 +8,7 @@ class DecisionMaker {
 
         this.model = new ChatOpenAI({
             openAIApiKey: apiKey,
-            modelName: "minimax/minimax-m2.5:free",
+            modelName: "qwen/qwen3.6-plus",
             configuration: {
                 baseURL: "https://openrouter.ai/api/v1",
             }
