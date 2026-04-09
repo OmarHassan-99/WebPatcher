@@ -10,7 +10,7 @@ interface LLMConfig {
 export class LLMProvider {
     private static instance: LLMProvider;
 
-    private modelName = "qwen/qwen3-coder-next";
+    private modelName = "qwen/qwen3-coder-30b-a3b-instruct";
     private llm: ChatOpenAI | null = null;
     private isInitialized = false;
 
@@ -30,10 +30,10 @@ export class LLMProvider {
     public async initialize(): Promise<void> {
         if (this.isInitialized) return;
 
-        const apiKey = process.env.OPENROUTER_API_KEY;
+        const apiKey = process.env.OPENAI_API_KEY;
         if (!apiKey) {
             throw new Error(
-                "[LLMProvider] OPENROUTER_API_KEY is not set. " +
+                "[LLMProvider] OPENAI_API_KEY is not set. " +
                 "Please add it to your .env file."
             );
         }
@@ -46,6 +46,7 @@ export class LLMProvider {
             maxTokens: MAX_RESPONSE_TOKENS,
             topP: 0.9,
             maxRetries: 3,
+            maxConcurrency: 1,
             apiKey,
             configuration: {
                 baseURL: "https://openrouter.ai/api/v1",
@@ -80,7 +81,7 @@ export class LLMProvider {
             await this.initialize();
         }
 
-        const maxRetries = 3;
+        const maxRetries = 5;
 
         for (let attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -106,7 +107,7 @@ export class LLMProvider {
                 if (isRateLimit) {
                     logger.warn(
                         `[LLMProvider] Rate limited (429) on attempt ${attempt}/${maxRetries}. ` +
-                        `Will retry after backoff.`
+                        `Will retry after aggressive backoff.`
                     );
                 }
 
@@ -118,10 +119,13 @@ export class LLMProvider {
                     throw error;
                 }
 
-                const delayMs = Math.pow(2, attempt - 1) * 1000; // 1s, 2s, 4s
+                // If it's a rate limit, we need to wait much longer (8 RPM limit = ~7.5s per request)
+                const baseDelay = isRateLimit ? 10000 : 2000;
+                const delayMs = Math.pow(2, attempt - 1) * baseDelay + (Math.random() * 1000);
+
                 logger.warn(
                     `[LLMProvider] Attempt ${attempt}/${maxRetries} failed. ` +
-                    `Retrying in ${delayMs / 1000}s...`
+                    `Retrying in ${(delayMs / 1000).toFixed(1)}s...`
                 );
                 await new Promise((resolve) => setTimeout(resolve, delayMs));
             }

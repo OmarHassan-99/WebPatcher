@@ -10,6 +10,7 @@ import { extractZapReport } from "../services/extractor.js";
 import {
   generatePatchesForFindings,
   isLangChainApiHealthy,
+  patchFileContent,
 } from "../services/patchService.js";
 import mongoose from "mongoose";
 import { createAndSaveRecommendation } from "../services/recommendationService.js";
@@ -22,6 +23,10 @@ import RepoDownloader, { generateFileTreeForAI } from '../services/githubService
 import UrlMapper from '../services/UrlMapper.js';
 import DecisionMaker from '../services/DecisionMaker.js';
 import { localPatchService } from '../services/localPatchService.js';
+import SemgrepService from '../services/smgrepService.js';
+import DetectorService from '../services/detectorService.js';
+import path from 'path';
+import fs from 'fs';
 
 
 export async function validateTargetAndRepoURLs(req, res) {
@@ -137,32 +142,120 @@ async function runScanInBackground(
         const downloader = new RepoDownloader();
         const localRepoPath = await downloader.downloadSourceCode(githubRepoUrl, userId);
         const projectStructure = generateFileTreeForAI(localRepoPath);
-        const aiDecisionMaker = new DecisionMaker(process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY);
+        const aiDecisionMaker = DecisionMaker.getInstance();
 
-        for (let finding of extractedReport) {
-          console.log(`[Mapping] Processing Alert Type: ${finding.alertName}`);
+        // 🎯 Detect Project Language Once
+        const projectLanguage = await DetectorService.detectLanguage(localRepoPath);
+        console.log(`[ScanController] Detected Project Language: ${projectLanguage}`);
+
+        let savedFilesCount = 0;
+        const MAX_SAVED_FILES = 5;
+
+        // 🎯 Sort findings by Severity to ensure the most important 5 files are saved first
+        const severityRank = { 'High': 3, 'Medium': 2, 'Low': 1, 'Informational': 0 };
+        const sortedReport = [...extractedReport].sort((a, b) => 
+          (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0)
+        );
+
+        for (let finding of sortedReport) {
+          const isHighOrMedium = finding.severity === 'High' || finding.severity === 'Medium';
+          
+          if (!isHighOrMedium) {
+            console.log(`[Mapping] Skipping low-impact alert: ${finding.alertName} (${finding.severity})`);
+            continue;
+          }
+
+          console.log(`[Mapping] Processing High/Medium Alert: ${finding.alertName}`);
+          
+          // Cache mappings for this specific alert to avoid redundant AI calls for identical routes
+          const findingCache = new Map();
 
           for (let instance of finding.instances) {
             const routePattern = UrlMapper.getRoutePattern(instance.uri);
-            console.log(`   [RoutePattern] Extracted pattern: ${routePattern} from URL: ${instance.uri}`);
-            const candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
-            console.log(`   [Candidates] Found ${candidates.length} candidate file(s) for pattern: ${routePattern}`);
-            if (candidates.length === 1) {
-              console.log(`candidate: ${candidates[0]} : sent to LLM`);
-            }
-            else if (candidates.length > 0) {
-              const aiResult = await aiDecisionMaker.identifyInfectedFile(
-                {
-                  url: instance.uri,
-                  type: finding.alertName,
-                  parameter: instance.param || "N/A"
-                },
-                candidates,
-                projectStructure
+            let finalMapping = null;
+
+            if (routePattern && findingCache.has(routePattern)) {
+              finalMapping = findingCache.get(routePattern);
+              console.log(`   [Mapping Cache] Hit for ${routePattern} -> Reusing: ${finalMapping}`);
+            } else {
+              // 1. Structural Candidate Discovery (URL-based)
+              let candidates = [];
+              if (routePattern) {
+                console.log(`   [Discovery] Finding structural candidates for pattern: ${routePattern}`);
+                candidates = UrlMapper.findFilesWithSemgrep(localRepoPath, routePattern);
+              }
+
+              // 2. Semantic Candidate Discovery (Pattern-based)
+              console.log(`   [Discovery] Finding semantic candidates for type: ${finding.alertName}`);
+              const semanticCandidates = await SemgrepService.findCandidates(
+                localRepoPath, 
+                { parameter: instance.param || "N/A", type: finding.alertName }, 
+                projectLanguage
               );
 
-              instance.source_file_path = aiResult.selected_file;
-              console.log(`   [Mapped] URL: ${instance.uri} -> File: ${instance.source_file_path}`);
+              // 3. Combine & Deduplicate
+              const combinedSet = new Set([...candidates, ...semanticCandidates]);
+              const finalCandidates = Array.from(combinedSet);
+              console.log(`   [Candidates] Total unique candidates discovered: ${finalCandidates.length}`);
+              
+              if (finalCandidates.length === 1) {
+                finalMapping = finalCandidates[0];
+                console.log(`   [Mapped] EXACT: Found singular candidate -> ${finalMapping}`);
+              }
+              else if (finalCandidates.length > 0) {
+                const aiResult = await aiDecisionMaker.identifyInfectedFile(
+                  {
+                    url: instance.uri,
+                    type: finding.alertName,
+                    parameter: instance.param || "N/A"
+                  },
+                  finalCandidates,
+                  projectStructure
+                );
+
+                if (aiResult && aiResult.selected_file) {
+                  finalMapping = aiResult.selected_file;
+                  console.log(`✅ Success: AI identified the file!`);
+                  console.log(`🎯 Targeted File: ${finalMapping}`);
+                  console.log(`📝 Reason: ${aiResult.reasoning}`);
+                  console.log(`📊 Confidence: ${(aiResult.confidence_score || 0) * 100}%`);
+                } else {
+                  console.error(`❌ Failed: AI could not make a clear decision for ${instance.uri}`);
+                  if (aiResult) console.error("Full AI Result:", JSON.stringify(aiResult, null, 2));
+                }
+              }
+              
+              // Store in cache for subsequent instances of this alert
+              if (routePattern) {
+                findingCache.set(routePattern, finalMapping);
+              }
+            }
+
+            // --- Storage Logic for Manual Review ---
+            if (finalMapping) {
+                instance.source_file_path = finalMapping;
+                
+                if (savedFilesCount >= MAX_SAVED_FILES) {
+                    console.log(`   [Storage] Limit reached (${MAX_SAVED_FILES}). Skipping file copy for: ${path.basename(finalMapping)}`);
+                    continue;
+                }
+
+                try {
+                    const storageDir = path.join(process.cwd(), 'storage', 'original');
+                    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+
+                    const alertClean = finding.alertName.replace(/[^a-z0-9]/gi, '_');
+                    const fileName = path.basename(finalMapping);
+                    const destPath = path.join(storageDir, `${alertClean}-${fileName}`);
+                    
+                    if (!fs.existsSync(destPath)) {
+                        fs.copyFileSync(finalMapping, destPath);
+                        savedFilesCount++;
+                        console.log(`   [Storage] Saved copy in: ${destPath} (${savedFilesCount}/${MAX_SAVED_FILES})`);
+                    }
+                } catch (copyErr) {
+                    console.error(`   [Storage] Failed to save copy: ${copyErr.message}`);
+                }
             }
           }
         }
@@ -171,6 +264,43 @@ async function runScanInBackground(
           { scanJob: scanJobId },
           { $set: { findings: extractedReport } }
         );
+
+        // --- START: Automated Full-File Patching Pipeline ---
+        try {
+          const originalStorageDir = path.join(process.cwd(), 'storage', 'original');
+          const patchedStorageDir = path.join(process.cwd(), 'storage', 'patched');
+
+          if (fs.existsSync(originalStorageDir)) {
+            const filesToPatch = fs.readdirSync(originalStorageDir).filter(f => f !== '.gitignore');
+            
+            if (filesToPatch.length > 0) {
+              console.log(`\n[ScanController] Initiating patching for ${filesToPatch.length} stored files...`);
+              if (!fs.existsSync(patchedStorageDir)) fs.mkdirSync(patchedStorageDir, { recursive: true });
+
+              for (const fileName of filesToPatch) {
+                try {
+                  const originalPath = path.join(originalStorageDir, fileName);
+                  const originalContent = fs.readFileSync(originalPath, 'utf-8');
+
+                  // Call the remediator LLM
+                  const patchedContent = await patchFileContent(fileName, originalContent);
+
+                  const patchedPath = path.join(patchedStorageDir, fileName);
+                  fs.writeFileSync(patchedPath, patchedContent);
+                  console.log(`✅ [Patching] Successfully saved remediated file: ${patchedPath}`);
+                  
+                  // Rate limit consideration for sequential patching
+                  await new Promise(r => setTimeout(r, 2000));
+                } catch (filePatchErr) {
+                  console.error(`❌ [Patching] Failed to patch ${fileName}:`, filePatchErr.message);
+                }
+              }
+            }
+          }
+        } catch (patchPipelineErr) {
+          console.error("[ScanController] Patching pipeline failed:", patchPipelineErr.message);
+        }
+        // --- END: Automated Full-File Patching Pipeline ---
 
       } catch (mappingError) {
         console.error("[ScanController] Mapping process failed:", mappingError.message);

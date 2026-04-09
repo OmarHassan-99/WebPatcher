@@ -243,37 +243,29 @@ Description: {description}
         await this.llmProvider.initialize();
 
         const systemPrompt = `Act as a Senior Application Security Engineer and secure code remediation expert.
-
-Your task is to FIX vulnerabilities while STRICTLY preserving the original behavior.
-
+ 
+Your task is to FIX vulnerabilities while STRICTLY preserving the original behavior and ensuring high-quality, semantic, and syntactically correct code.
+ 
 CRITICAL RULES:
-1. Return ONLY the full updated file content.
-2. DO NOT include explanations, comments about changes, or markdown code blocks.
-3. DO NOT truncate, summarize, or omit any part of the file.
-4. The output MUST be a complete, runnable file.
-
+1. Return ONLY the full updated file content. No markdown, no commentary.
+2. The output MUST be a complete, runnable, and syntactically valid file.
+3. DO NOT introduce logical errors or break original functionality.
+4. Use modern, secure, and semantic coding patterns for the detected language.
+ 
 LOGIC PRESERVATION (VERY IMPORTANT):
-- DO NOT change the application's logic, flow, or functionality.
-- DO NOT remove features unless they are inherently insecure and must be replaced with a secure equivalent.
-- If replacing insecure code, ensure the new code produces the SAME functional outcome.
-- Maintain function names, routes, APIs, and structure unless absolutely necessary for security.
-
-SECURITY REQUIREMENTS:
-- Fix real vulnerabilities (SQL injection, XSS, command injection, path traversal, etc.)
-- Sanitize and validate all external inputs
-- Replace insecure APIs with secure alternatives (e.g., prepared statements)
-- Avoid introducing new vulnerabilities
-
-CODE QUALITY:
-- Ensure syntax is correct and consistent
-- Keep code clean and production-ready
-- Do NOT leave placeholders, TODOs, or incomplete fixes
-
-STRICT VERIFICATION BEFORE OUTPUT:
-- Ensure the output is NOT identical to the input if vulnerabilities exist
-- Ensure the file is COMPLETE (no missing parts)
-- Ensure logic is preserved and still functional
-
+- DO NOT change the application's logic, flow, or functionality except to secure it.
+- Maintain all original function names, routes, variables, and structural integrity.
+- If replacing insecure code (e.g., shell_exec), ensure the new code (e.g., execFile) produces the SAME functional outcome.
+ 
+CODE QUALITY & SEMANTICS:
+- The code must be production-ready and follow industry best practices.
+- Ensure strict adherence to syntax rules (no missing braces, correctly closed tags, etc.).
+- Ensure all variables used in fixes are correctly defined or imported.
+- Sanitize and validate all external inputs using standard libraries where applicable.
+ 
+STRICT VERIFICATION:
+- Before outputting, mentally verify that the file is COMPLETE and functionally equivalent to the original but secured.
+ 
 FINAL OUTPUT:
 Return ONLY the patched code as plain text.`;
 
@@ -335,6 +327,14 @@ Return ONLY the updated code.`;
 
         for (let i = 0; i < total; i++) {
             const vuln = sorted[i];
+
+            // ── Rate Limit Cooldown ─────────────────────────────
+            // Respect the 8 RPM limit (approx 7.5s per request)
+            if (i > 0) {
+                const cooldownMs = 10000; // 10 seconds
+                logger.info(`[PatchGenerator] Cooling down for ${cooldownMs / 1000}s to respect rate limits...`);
+                await new Promise(r => setTimeout(r, cooldownMs));
+            }
 
             // ── Budget check ────────────────────────────────────
             if (!this.requestBudget.canMakeRequest()) {

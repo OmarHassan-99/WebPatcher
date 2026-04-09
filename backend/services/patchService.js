@@ -96,3 +96,35 @@ export async function isLangChainApiHealthy() {
     return false;
   }
 }
+
+/**
+ * Patch a full file content using the LangChain API
+ * 
+ * @param {string} fileName - Name of the file
+ * @param {string} content - Original file content
+ * @returns {Promise<string>} - Patched file content
+ */
+export async function patchFileContent(fileName, content) {
+  try {
+    console.log(`[PatchService] Patching full file: ${fileName}`);
+
+    const response = await axios.post(
+      `${LANGCHAIN_API_URL}/patch-file`,
+      { fileName, content },
+      {
+        timeout: 900000, // 15 minutes timeout
+        headers: {
+          "Content-Type": "application/json",
+        },
+      },
+    );
+
+    if (response.data && response.data.success) {
+      return response.data.patchedContent;
+    }
+    throw new Error(response.data.error || "Failed to patch file");
+  } catch (error) {
+    console.error(`[PatchService] Error patching file ${fileName}:`, error.message);
+    throw error;
+  }
+}
