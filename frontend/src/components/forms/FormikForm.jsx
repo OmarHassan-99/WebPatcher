@@ -28,7 +28,7 @@ export default function FormikForm({
               disabled={isSubmitting}
               whileHover={!isSubmitting ? { scale: 1.02 } : {}}
               whileTap={!isSubmitting ? { scale: 0.98 } : {}}
-              className={`w-full py-3 mt-2 rounded-xl text-white font-semibold transition-all duration-300 flex items-center justify-center gap-2 border ${
+              className={`w-full py-3 mt-5 rounded-xl text-white font-semibold transition-all duration-300 flex items-center justify-center gap-2 border ${
                 isSubmitting
                   ? "bg-surface-800 border-surface-700 cursor-not-allowed opacity-60"
                   : "bg-surface-800 border-surface-600 hover:bg-surface-700 hover:border-surface-500 shadow-md cursor-pointer backdrop-blur-sm"

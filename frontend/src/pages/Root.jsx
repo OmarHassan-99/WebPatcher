@@ -167,7 +167,7 @@ export default function RootPage() {
         )}
       </div>
       <main
-        className={`flex flex-1 flex-col min-h-screen ${location.pathname === "/" || location.pathname === "/auth" ? "pb-0" : "pb-20"}`}
+        className={`flex flex-1 flex-col min-h-screen ${location.pathname === "/" || location.pathname === "/auth" ? "pb-0" : "pb-19"}`}
       >
         <MainNavigation />
         <Outlet />

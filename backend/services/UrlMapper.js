@@ -3,6 +3,23 @@ import path from 'path';
 import fs from 'fs';
 
 class UrlMapper {
+    /**
+     * تنظيف الـ URL لاستخراج الجزء اللي هندور عليه (الـ Route)
+     */
+    static getRoutePattern(zapUrl) {
+        try {
+            const urlObj = new URL(zapUrl);
+            let route = urlObj.pathname;
+
+            return route.replace(/\/\d+/g, '/...');
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /**
+     * البحث الاحترافي باستخدام Semgrep مع ميزة الـ Exact Match
+     */
     static findFilesWithSemgrep(repoPath, routePattern) {
         if (!routePattern) return [];
         console.log(`[UrlMapper] Searching for pattern: ${routePattern}`);
