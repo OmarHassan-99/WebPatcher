@@ -48,6 +48,20 @@ const scanJobSchema = new mongoose.Schema(
       default: "queued",
     },
     findingsCount: { type: Number, default: 0 },
+    openapiFilePath: { type: String },
+    openapiValidation: {
+      status: { type: String, enum: ["pending", "valid", "invalid", "error"] },
+      error: { type: String },
+      validatedAt: { type: Date },
+    },
+    schemathesis: {
+      status: { type: String, enum: ["pending", "running", "passed", "failed", "error"] },
+      reportPath: { type: String },
+      exitCode: { type: Number },
+      error: { type: String },
+      ranAt: { type: Date },
+      finishedAt: { type: Date },
+    },
     startedAt: {
       type: Date,
       default: Date.now,
