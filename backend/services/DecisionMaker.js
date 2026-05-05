@@ -21,6 +21,7 @@ class DecisionMaker {
             openAIApiKey: apiKey,
             modelName: "qwen/qwen3-coder-30b-a3b-instruct",
             maxConcurrency: 1,
+            maxTokens: 1500,
             configuration: {
                 baseURL: "https://openrouter.ai/api/v1",
             }

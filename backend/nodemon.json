@@ -1,0 +1,11 @@
+{
+  "ignore": [
+    "storage",
+    "storage/*",
+    "storage/**/*",
+    "results/*",
+    "*.log",
+    "../web_patcher_storage/*",
+    "../web_patcher_storage/**/*"
+  ]
+}

@@ -3,7 +3,7 @@ import ScanJob from "../models/scanJobModel.js";
 export async function resetStalledScans() {
   try {
     const result = await ScanJob.updateMany(
-      { status: { $in: ["running", "analyzing", "patching"] } },
+      { status: { $in: ["running", "analyzing", "patching", "validating"] } },
       {
         $set: {
           status: "failed",

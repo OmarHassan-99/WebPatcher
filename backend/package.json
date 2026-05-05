@@ -6,7 +6,8 @@
   "author": "",
   "type": "module",
   "main": "server.js",
-  "scripts": {
+    "scripts": {
+    "dev": "nodemon server.js",
     "server": "nodemon server.js",
     "test": "jest",
     "openapi:validate:latest": "node ./scripts/validate-latest-openapi.js",
@@ -36,7 +37,7 @@
     "nodemon": "^3.1.10",
     "octokit": "^5.0.5",
     "socket.io": "^4.8.3",
-    "uuid": "^13.0.0",
+    "uuid": "^14.0.0",
     "validator": "^13.15.15",
     "zaproxy": "^2.0.0-rc.7"
   },

@@ -121,18 +121,42 @@ class RepoDownloader {
 
             console.log(`[RepoDownloader] Starting sparse download for User: ${userId}`);
 
-            // محاولة التحميل من الفرع الأساسي (Main أو Master)
+            // Try to detect default branch dynamically (works for any branch name),
+            // then fallback to common names.
+            let branchCandidates = [];
             try {
-                console.log("Pulled from 'main' branch.");
-
-
-                execSync('git pull --depth 1 origin main', options);
-            } catch (e) {
-                try {
-                    execSync('git pull --depth 1 origin master', options);
-                } catch (err) {
-                    throw new Error("Failed to pull from main or master branch. Check repo URL or branch name.");
+                const headSymref = execSync(`git ls-remote --symref "${repoUrl}" HEAD`, {
+                    stdio: 'pipe',
+                }).toString();
+                const match = headSymref.match(/ref:\s+refs\/heads\/([^\s]+)\s+HEAD/);
+                if (match && match[1]) {
+                    branchCandidates.push(match[1]);
                 }
+            } catch {
+                // Ignore and fall back to defaults below
+            }
+
+            branchCandidates.push('main', 'master');
+            branchCandidates = [...new Set(branchCandidates)];
+
+            let pulled = false;
+            for (const branch of branchCandidates) {
+                try {
+                    console.log(`[RepoDownloader] Trying branch: ${branch}`);
+                    execSync(`git pull --depth 1 origin ${branch}`, options);
+                    console.log(`[RepoDownloader] Pulled from '${branch}' branch.`);
+                    pulled = true;
+                    break;
+                } catch {
+                    // Try next candidate branch
+                }
+            }
+
+            if (!pulled) {
+                throw new Error(
+                    `Failed to pull from candidate branches: ${branchCandidates.join(', ')}. ` +
+                    `Check repo URL, branch visibility, or access permissions.`
+                );
             }
 
             console.log(`[RepoDownloader] Repository successfully localized at: ${targetDir}`);

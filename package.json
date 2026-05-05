@@ -3,11 +3,16 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-        "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run server --prefix backend\" \"npm run server --prefix langchain\" \"ollama serve\" \"npm run zap\"",
-        "dev:nozap": "concurrently \"npm run dev --prefix frontend\" \"npm run server --prefix backend\" \"npm run server --prefix langchain\" \"ollama serve\"",
+        "dev": "concurrently \"npm run dev --prefix frontend\" \"npm run server --prefix backend\" \"npm run server --prefix langchain\"",
+        "dev:full": "concurrently \"npm run dev --prefix frontend\" \"npm run server --prefix backend\" \"npm run server --prefix langchain\" \"npm run ollama:serve\" \"npm run zap\"",
+        "dev:nozap": "concurrently \"npm run dev --prefix frontend\" \"npm run server --prefix backend\" \"npm run server --prefix langchain\" \"npm run ollama:serve\"",
+        "ollama:serve": "cmd /c \"where ollama >nul 2>nul && ollama serve || echo [warn] Ollama is not installed or not on PATH. Skipping ollama serve.\"",
         "zap": "cd \"backend/services/Zed Attack Proxy\" && java -Xmx4g -jar zap-2.17.0.jar -daemon -port 8080 -config api.key=123 -config callhome.optin=false"
     },
     "devDependencies": {
-        "concurrently": "^9.1.2"
+        "@tailwindcss/oxide-win32-x64-msvc": "^4.1.18",
+        "@vitejs/plugin-react": "4.3.4",
+        "concurrently": "^9.1.2",
+        "vite": "5.4.21"
     }
 }

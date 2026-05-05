@@ -5,7 +5,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const STORAGE_ROOT = path.resolve(__dirname, "../../storage");
+const STORAGE_ROOT = path.resolve(__dirname, "../storage");
 const ORIGINAL_DIR = path.join(STORAGE_ROOT, "original");
 const PATCHED_DIR = path.join(STORAGE_ROOT, "patched");
 const LANGCHAIN_API_URL = process.env.LANGCHAIN_API_URL || "http://localhost:3001";

@@ -28,9 +28,10 @@ import {
   defaultSchemathesisReportPath,
   runSchemathesisHarReport,
 } from "../services/schemathesisService.js";
-import { localPatchService } from '../services/localPatchService.js';
 import SemgrepService from '../services/smgrepService.js';
 import DetectorService from '../services/detectorService.js';
+import { runValidationCycle } from '../services/validationOrchestrator.js';
+import { ensureZapRunning, isZapReachable } from "../services/zapManagerService.js";
 import path from 'path';
 import fs from 'fs';
 
@@ -173,6 +174,10 @@ async function runScanInBackground(
     openapiTask = downloadTask.then(async (repoPath) => {
       if (!repoPath) return null;
       try {
+        emitScanEvent(scanJobId, "scan:stage", {
+          stage: "openapi",
+          message: "Generating OpenAPI document...",
+        });
         const { outputPath } = await generateAndWriteOpenapiYaml({
           repoPath,
           targetUrl: url,
@@ -194,6 +199,11 @@ async function runScanInBackground(
             },
           },
         });
+        emitScanEvent(scanJobId, "scan:stage", {
+          stage: "openapi",
+          message: `OpenAPI written: ${outputPath}`,
+        });
+        console.log(`[ScanController] OpenAPI file path: ${outputPath}`);
 
         if (validation.ok) {
           console.log("[ScanController] OpenAPI validation: valid");
@@ -219,11 +229,18 @@ async function runScanInBackground(
             });
 
             child.on("exit", async (code) => {
-              const ok = code === 0;
+              // Exit 0 = all tests passed
+              // Exit 1 = test failures found (e.g. QUERY method compliance) — HAR report is still valid
+              // Other  = unexpected error (crash, timeout, missing binary, etc.)
+              let status;
+              if (code === 0) status = "passed";
+              else if (code === 1) status = "issues_found";
+              else status = "error";
+
               await ScanJob.findByIdAndUpdate(scanJobId, {
                 $set: {
                   schemathesis: {
-                    status: ok ? "passed" : "failed",
+                    status,
                     reportPath,
                     exitCode: code ?? 1,
                     finishedAt: new Date(),
@@ -263,22 +280,52 @@ async function runScanInBackground(
             "[ScanController] OpenAPI validation failed:",
             validation.error,
           );
+          emitScanEvent(scanJobId, "scan:stage", {
+            stage: "openapi",
+            message: "OpenAPI validation failed",
+          });
         }
       } catch (openapiErr) {
         console.error(
           "[ScanController] OpenAPI generation failed:",
           openapiErr.message || openapiErr,
         );
+        emitScanEvent(scanJobId, "scan:error", {
+          stage: "openapi",
+          message: openapiErr?.message || String(openapiErr),
+        });
       }
       return repoPath;
     });
 
-    const skipZap = String(process.env.SKIP_ZAP || "").toLowerCase() === "true";
+    const skipZapEnv = String(process.env.SKIP_ZAP || "").toLowerCase() === "true";
+    let zapReachable = await isZapReachable();
+    let autoStartedZap = false;
+    if (!skipZapEnv && !zapReachable) {
+      console.log("[ScanController] ZAP not reachable. Attempting auto-start...");
+      emitScanEvent(scanJobId, "scan:stage", {
+        stage: "init",
+        message: "ZAP not reachable, starting daemon...",
+      });
+      const startResult = await ensureZapRunning();
+      zapReachable = startResult.reachable;
+      autoStartedZap = startResult.started && startResult.reachable;
+      if (autoStartedZap) {
+        console.log("[ScanController] ZAP auto-started and is now reachable.");
+        emitScanEvent(scanJobId, "scan:stage", {
+          stage: "init",
+          message: "ZAP daemon started successfully.",
+        });
+      }
+    }
+    const skipZap = skipZapEnv || !zapReachable;
 
     let extractedReport = [];
     if (skipZap) {
       console.log(
-        "[ScanController] SKIP_ZAP=true — skipping ZAP scan and running OpenAPI-only flow.",
+        skipZapEnv
+          ? "[ScanController] SKIP_ZAP=true — skipping ZAP scan and running OpenAPI-only flow."
+          : "[ScanController] ZAP not reachable on 127.0.0.1:8080 — running OpenAPI-only flow.",
       );
       // Ensure OpenAPI generation has a chance to finish; mapping/patching rely on ZAP findings.
       await openapiTask;
@@ -299,7 +346,39 @@ async function runScanInBackground(
       return;
     }
 
-    const { report } = await runZapScanService(url, scanJobId, userId, authConfig);
+    let report;
+    try {
+      const zapResult = await runZapScanService(url, scanJobId, userId, authConfig);
+      report = zapResult.report;
+    } catch (zapErr) {
+      const msg = String(zapErr?.message || zapErr || "");
+      const isZapUnavailable =
+        msg.includes("ECONNREFUSED") && msg.includes("127.0.0.1:8080");
+
+      if (isZapUnavailable) {
+        console.warn(
+          "[ScanController] ZAP is unavailable (127.0.0.1:8080). Falling back to OpenAPI-only completion.",
+        );
+        await openapiTask;
+
+        await ScanJob.findByIdAndUpdate(scanJobId, {
+          $set: { status: "completed", finishedAt: Date.now() },
+        });
+        broadcastToUser(userId, "scan:status", {
+          scanJobId: scanJobId.toString(),
+          status: "completed",
+        });
+        emitScanEvent(scanJobId, "scan:complete", {
+          stage: "done",
+          successCount: 0,
+          total: 0,
+          message: "OpenAPI/Schemathesis complete (ZAP unavailable)",
+        });
+        return;
+      }
+
+      throw zapErr;
+    }
 
     extractedReport = await extractZapReport(report, scanJobId);
     console.log(extractedReport);
@@ -322,6 +401,16 @@ async function runScanInBackground(
         // 🎯 Detect Project Language Once
         const projectLanguage = await DetectorService.detectLanguage(localRepoPath);
         console.log(`[ScanController] Detected Project Language: ${projectLanguage}`);
+
+        // Clear originals from any previous scan so only current-scan files are merged.
+        const originalStorageDirEarly = path.join(process.cwd(), 'storage', 'original');
+        if (fs.existsSync(originalStorageDirEarly)) {
+          for (const old of fs.readdirSync(originalStorageDirEarly)) {
+            if (old !== '.gitignore' && old !== '.gitkeep') {
+              try { fs.unlinkSync(path.join(originalStorageDirEarly, old)); } catch { /* best effort */ }
+            }
+          }
+        }
 
         let savedFilesCount = 0;
         const MAX_SAVED_FILES = 5;
@@ -442,34 +531,78 @@ async function runScanInBackground(
           { scanJob: scanJobId },
           { $set: { findings: extractedReport } },
         );
-        // --- START: Automated Full-File Patching Pipeline ---
+        // --- START: Merged Full-File Patching Pipeline ---
+        // Groups stored originals by base filename, then chain-patches each group
+        // through the LLM sequentially so that ONE final merged file is produced
+        // per unique target — preventing any later patch from silently overwriting
+        // an earlier fix applied to the same file.
         try {
           const originalStorageDir = path.join(process.cwd(), 'storage', 'original');
           const patchedStorageDir = path.join(process.cwd(), 'storage', 'patched');
 
           if (fs.existsSync(originalStorageDir)) {
-            const filesToPatch = fs.readdirSync(originalStorageDir).filter(f => f !== '.gitignore');
-            
-            if (filesToPatch.length > 0) {
-              console.log(`\n[ScanController] Initiating patching for ${filesToPatch.length} stored files...`);
+            const allFiles = fs.readdirSync(originalStorageDir)
+              .filter(f => f !== '.gitignore' && f !== '.gitkeep' &&
+                fs.statSync(path.join(originalStorageDir, f)).isFile());
+
+            if (allFiles.length > 0) {
               if (!fs.existsSync(patchedStorageDir)) fs.mkdirSync(patchedStorageDir, { recursive: true });
 
-              for (const fileName of filesToPatch) {
+              // Clear stale patches from previous scans before writing new ones.
+              for (const stale of fs.readdirSync(patchedStorageDir)) {
+                if (stale !== '.gitignore' && stale !== '.gitkeep') {
+                  try { fs.unlinkSync(path.join(patchedStorageDir, stale)); } catch { /* best effort */ }
+                }
+              }
+
+              // Group stored files by their base filename (strip alert prefix).
+              // e.g. "CSP_Header_Not_Set-app.js" and "Anti_clickjacking-app.js"
+              // both belong to the group keyed by "app.js".
+              const fileGroups = new Map(); // baseName → [fileName, ...]
+              for (const fileName of allFiles) {
+                const dashIndex = fileName.indexOf('-');
+                if (dashIndex === -1) continue;
+                const baseName = fileName.slice(dashIndex + 1);
+                if (!fileGroups.has(baseName)) fileGroups.set(baseName, []);
+                fileGroups.get(baseName).push(fileName);
+              }
+
+              console.log(`\n[PatchPlanner] Current scan findings loaded: ${allFiles.length}`);
+              console.log(`[PatchPlanner] Current scan ID: ${scanJobId}`);
+              console.log(`[PatchPlanner] Target files identified: ${fileGroups.size}`);
+              console.log(`[ScanController] Initiating patching for ${fileGroups.size} unique target files...`);
+
+              for (const [baseName, files] of fileGroups) {
+                if (files.length > 1) {
+                  console.log(`[PatchPlanner] Multiple findings target ${baseName}:`);
+                  files.forEach(f => console.log(`   - ${f}`));
+                  console.log(`[PatchPlanner] Generating one merged patch for ${baseName}`);
+                }
+
                 try {
-                  const originalPath = path.join(originalStorageDir, fileName);
-                  const originalContent = fs.readFileSync(originalPath, 'utf-8');
+                  // All files in a group are copies of the same source — use the first.
+                  const firstFilePath = path.join(originalStorageDir, files[0]);
+                  let currentContent = fs.readFileSync(firstFilePath, 'utf-8');
 
-                  // Call the remediator LLM
-                  const patchedContent = await patchFileContent(fileName, originalContent);
+                  // Chain: each LLM call receives the output of the previous call,
+                  // so every finding's fix is layered on top of all prior fixes.
+                  for (const fileName of files) {
+                    currentContent = await patchFileContent(fileName, currentContent);
+                    if (files.length > 1) {
+                      await new Promise(r => setTimeout(r, 2000));
+                    }
+                  }
 
-                  const patchedPath = path.join(patchedStorageDir, fileName);
-                  fs.writeFileSync(patchedPath, patchedContent);
-                  console.log(`✅ [Patching] Successfully saved remediated file: ${patchedPath}`);
-                  
-                  // Rate limit consideration for sequential patching
-                  await new Promise(r => setTimeout(r, 2000));
+                  // Save ONE merged patched file per unique target.
+                  // The "merged-" prefix gives it highest priority in patchApplicatorService.
+                  const ext = path.extname(baseName);
+                  const base = path.basename(baseName, ext);
+                  const mergedFileName = `merged-${base}Patched${ext}`;
+                  const outputPath = path.join(patchedStorageDir, mergedFileName);
+                  fs.writeFileSync(outputPath, currentContent);
+                  console.log(`✅ [Patching] Successfully saved remediated file: ${outputPath}`);
                 } catch (filePatchErr) {
-                  console.error(`❌ [Patching] Failed to patch ${fileName}:`, filePatchErr.message);
+                  console.error(`❌ [Patching] Failed to patch ${baseName}:`, filePatchErr.message);
                 }
               }
             }
@@ -477,7 +610,7 @@ async function runScanInBackground(
         } catch (patchPipelineErr) {
           console.error("[ScanController] Patching pipeline failed:", patchPipelineErr.message);
         }
-        // --- END: Automated Full-File Patching Pipeline ---
+        // --- END: Merged Full-File Patching Pipeline ---
 
       } catch (mappingError) {
         console.error(
@@ -492,7 +625,20 @@ async function runScanInBackground(
 
 
     console.log("[ScanController] Scan complete. Starting patch generation...");
-    generatePatchesInBackground(extractedReport, scanJobId, userId);
+
+    // Collect paths needed by validation cycle
+    const openapiFilePath = (await ScanJob.findById(scanJobId).lean())?.openapiFilePath || null;
+    const beforeHarPath = (await ScanJob.findById(scanJobId).lean())?.schemathesis?.reportPath || null;
+
+    generatePatchesInBackground(
+      extractedReport,
+      scanJobId,
+      userId,
+      localRepoPath,
+      openapiFilePath,
+      beforeHarPath,
+      url,
+    );
   } catch (error) {
     console.error("[ScanController] Background scan error:", error);
 
@@ -522,7 +668,15 @@ async function runScanInBackground(
   }
 }
 
-async function generatePatchesInBackground(findings, scanJobId, userId) {
+async function generatePatchesInBackground(
+  findings,
+  scanJobId,
+  userId,
+  repoPath = null,
+  openapiPath = null,
+  beforeHarPath = null,
+  targetUrl = null,
+) {
   try {
     // Check if LangChain API is running
     const isHealthy = await isLangChainApiHealthy();
@@ -637,14 +791,66 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
       console.log("=".repeat(80) + "\n");
 
 
-      // CODE PATCH
-      try {
-        console.log("[ScanController] Starting local storage file patching...");
-        // This will process all files in storage
-        await localPatchService.patchLocalFiles();
-      } catch (localErr) {
-        console.error(`[ScanController] Local storage patching failed: ${localErr.message}`);
+      // ── VALIDATION CYCLE ──────────────────────────────────────────
+      // After patching, run the full validation cycle if we have a repo
+      let validationResult = null;
+      if (repoPath) {
+        try {
+          await ScanJob.findByIdAndUpdate(scanJobId, {
+            $set: {
+              status: "validating",
+              validation: { status: "running", startedAt: new Date() },
+            },
+          });
+          broadcastToUser(userId, "scan:status", {
+            scanJobId: scanJobId.toString(),
+            status: "validating",
+          });
+          emitScanEvent(scanJobId, "scan:stage", {
+            stage: "validating",
+            message: "Running validation cycle on patched application…",
+          });
+
+          // Retrieve the latest findings with source_file_path populated
+          const scanReport = await ScanReport.findOne({ scanJob: scanJobId }).lean();
+          const enrichedFindings = scanReport?.findings || findings;
+
+          validationResult = await runValidationCycle({
+            repoPath,
+            scanJobId,
+            userId,
+            targetUrl: targetUrl || (await ScanJob.findById(scanJobId).lean())?.targetUrl,
+            findings: enrichedFindings,
+            openapiPath,
+            beforeHarPath,
+          });
+
+          await ScanJob.findByIdAndUpdate(scanJobId, {
+            $set: {
+              validation: {
+                status: "completed",
+                report: validationResult,
+                startedAt: validationResult.timestamp,
+                finishedAt: new Date(),
+              },
+            },
+          });
+
+          console.log(`[ScanController] Validation cycle completed: ${validationResult.verdict}`);
+        } catch (validationErr) {
+          console.error(`[ScanController] Validation cycle failed: ${validationErr.message}`);
+          await ScanJob.findByIdAndUpdate(scanJobId, {
+            $set: {
+              validation: {
+                status: "failed",
+                report: { error: validationErr.message },
+                finishedAt: new Date(),
+              },
+            },
+          });
+        }
       }
+      // ── END VALIDATION CYCLE ──────────────────────────────────────
 
       await ScanJob.findByIdAndUpdate(scanJobId, {
         $set: { status: "completed", finishedAt: Date.now() },
@@ -654,11 +860,15 @@ async function generatePatchesInBackground(findings, scanJobId, userId) {
         status: "completed",
       });
 
+      const validationVerdict = validationResult
+        ? ` | Validation: ${validationResult.verdict}`
+        : '';
       emitScanEvent(scanJobId, "scan:complete", {
         stage: "done",
         successCount,
         total,
-        message: `Scan complete — ${successCount}/${total} patches generated`,
+        validationVerdict: validationResult?.verdict || null,
+        message: `Scan complete — ${successCount}/${total} patches generated${validationVerdict}`,
       });
     } else {
       console.error(

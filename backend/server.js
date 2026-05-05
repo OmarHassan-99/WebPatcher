@@ -33,7 +33,7 @@ app.use(express.json());
 app.use(cors({ origin: FRONT_END_ORIGIN, credentials: true }));
 app.use(cookieParser());
 
-connectDB();
+await connectDB();
 
 const store = MongoStore.create({ mongoUrl: MONGODB_URI });
 

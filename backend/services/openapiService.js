@@ -41,7 +41,7 @@ function pickSnippetAroundMatch(content, needleRegex, maxBefore = 2000, maxAfter
   return content.slice(start, end);
 }
 
-function collectCandidateSnippets(repoPath, maxCandidateFiles = 12, maxScannedFiles = 200) {
+export function collectCandidateSnippets(repoPath, maxCandidateFiles = 12, maxScannedFiles = 200) {
   const keywordsRegexes = [
     /(express\.Router)/i,
     /(router\.(get|post|put|delete|patch)\s*\()/i,
@@ -130,7 +130,7 @@ function collectCandidateSnippets(repoPath, maxCandidateFiles = 12, maxScannedFi
   return candidates;
 }
 
-function stripCodeFences(text) {
+export function stripCodeFences(text) {
   // Remove ```yaml ... ``` or generic ``` ... ```
   return text
     .replace(/```[a-zA-Z0-9_-]*\s*/g, "")
@@ -188,6 +188,7 @@ REQUIREMENTS
 - Only include endpoints you can infer from the snippets with reasonable confidence.
 - For unknown request/response schemas, use placeholders (e.g., string, object) rather than guessing exact models.
 - Prefer JSON requestBody if the code suggests JSON payloads.
+- CRITICAL: For all string properties in schemas, you MUST include 'minLength: 1' to avoid empty string validation errors.
 
 OUTPUT
 Return the YAML content only.
