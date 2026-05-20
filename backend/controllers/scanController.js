@@ -18,7 +18,6 @@ import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 import { testAuthentication } from "../services/zapAuthService.js";
 import ZapClient from "zaproxy";
 
-// استدعاء الخدمات الجديدة
 import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
 import UrlMapper from '../services/UrlMapper.js';
 import DecisionMaker from '../services/DecisionMaker.js';
@@ -79,54 +78,53 @@ export async function startZapScan(req, res) {
   const {
     url,
     targetName,
-    githubRepoUrl,
+     ,
     context,
     previousScanId,
     authConfig,
-  } = req.body;
-  const userId = req.session.user._id;
+} = req.body;
+const userId = req.session.user._id;
 
-  try {
-    console.log(`[ScanController] Received request to scan URL: ${url}`);
-    console.log(
-      `[ScanController] GitHub repo URL: ${
-        githubRepoUrl && String(githubRepoUrl).trim() !== ""
-          ? githubRepoUrl
-          : "(none)"
-      }`,
-    );
+try {
+  console.log(`[ScanController] Received request to scan URL: ${url}`);
+  console.log(
+    `[ScanController] GitHub repo URL: ${githubRepoUrl && String(githubRepoUrl).trim() !== ""
+      ? githubRepoUrl
+      : "(none)"
+    }`,
+  );
 
-    if (previousScanId) {
-      // Hide the previous scan from the Target list UI
-      await ScanJob.findByIdAndUpdate(previousScanId, {
-        $set: { isHidden: true },
-      });
-    }
-
-    const scan = await ScanJob.create({
-      user: req.session.user._id,
-      targetUrl: url,
-      githubRepoUrl,
-      targetName,
-      previousScanId,
-      context,
-      authConfig: authConfig || undefined,
+  if (previousScanId) {
+    // Hide the previous scan from the Target list UI
+    await ScanJob.findByIdAndUpdate(previousScanId, {
+      $set: { isHidden: true },
     });
-
-    res.status(202).json({ scanJobId: scan._id.toString() });
-
-    broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-    runScanInBackground(
-      url,
-      scan._id,
-      userId,
-      githubRepoUrl,
-      authConfig || null,
-    );
-  } catch (error) {
-    console.error("[ScanController] Failed to create scan job:", error);
-    res.status(500).json({ message: "Failed to start scan" });
   }
+
+  const scan = await ScanJob.create({
+    user: req.session.user._id,
+    targetUrl: url,
+    githubRepoUrl,
+    targetName,
+    previousScanId,
+    context,
+    authConfig: authConfig || undefined,
+  });
+
+  res.status(202).json({ scanJobId: scan._id.toString() });
+
+  broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
+  runScanInBackground(
+    url,
+    scan._id,
+    userId,
+    githubRepoUrl,
+    authConfig || null,
+  );
+} catch (error) {
+  console.error("[ScanController] Failed to create scan job:", error);
+  res.status(500).json({ message: "Failed to start scan" });
+}
 }
 
 async function runScanInBackground(
@@ -150,23 +148,23 @@ async function runScanInBackground(
     const downloadTask =
       githubRepoUrl && githubRepoUrl.trim() !== ""
         ? (async () => {
-            try {
-              console.log(
-                "[ScanController] Downloading repository for OpenAPI + mapping...",
-              );
-              const downloader = new RepoDownloader();
-              return await downloader.downloadSourceCode(
-                githubRepoUrl,
-                userId,
-              );
-            } catch (downloadErr) {
-              console.error(
-                "[ScanController] Repository download failed:",
-                downloadErr.message || downloadErr,
-              );
-              return null;
-            }
-          })()
+          try {
+            console.log(
+              "[ScanController] Downloading repository for OpenAPI + mapping...",
+            );
+            const downloader = new RepoDownloader();
+            return await downloader.downloadSourceCode(
+              githubRepoUrl,
+              userId,
+            );
+          } catch (downloadErr) {
+            console.error(
+              "[ScanController] Repository download failed:",
+              downloadErr.message || downloadErr,
+            );
+            return null;
+          }
+        })()
         : Promise.resolve(null);
 
     // Start OpenAPI generation as soon as the download finishes, but do not
@@ -417,20 +415,20 @@ async function runScanInBackground(
 
         // 🎯 Sort findings by Severity to ensure the most important 5 files are saved first
         const severityRank = { 'High': 3, 'Medium': 2, 'Low': 1, 'Informational': 0 };
-        const sortedReport = [...extractedReport].sort((a, b) => 
+        const sortedReport = [...extractedReport].sort((a, b) =>
           (severityRank[b.severity] || 0) - (severityRank[a.severity] || 0)
         );
 
         for (let finding of sortedReport) {
           const isHighOrMedium = finding.severity === 'High' || finding.severity === 'Medium';
-          
+
           if (!isHighOrMedium) {
             console.log(`[Mapping] Skipping low-impact alert: ${finding.alertName} (${finding.severity})`);
             continue;
           }
 
           console.log(`[Mapping] Processing High/Medium Alert: ${finding.alertName}`);
-          
+
           // Cache mappings for this specific alert to avoid redundant AI calls for identical routes
           const findingCache = new Map();
 
@@ -447,16 +445,16 @@ async function runScanInBackground(
               if (routePattern) {
                 console.log(`   [Discovery] Finding structural candidates for pattern: ${routePattern}`);
                 candidates = UrlMapper.findFilesWithSemgrep(
-              localRepoPath,
-              routePattern,
-            );
+                  localRepoPath,
+                  routePattern,
+                );
               }
 
               // 2. Semantic Candidate Discovery (Pattern-based)
               console.log(`   [Discovery] Finding semantic candidates for type: ${finding.alertName}`);
               const semanticCandidates = await SemgrepService.findCandidates(
-                localRepoPath, 
-                { parameter: instance.param || "N/A", type: finding.alertName }, 
+                localRepoPath,
+                { parameter: instance.param || "N/A", type: finding.alertName },
                 projectLanguage
               );
 
@@ -464,7 +462,7 @@ async function runScanInBackground(
               const combinedSet = new Set([...candidates, ...semanticCandidates]);
               const finalCandidates = Array.from(combinedSet);
               console.log(`   [Candidates] Total unique candidates discovered: ${finalCandidates.length}`);
-              
+
               if (finalCandidates.length === 1) {
                 finalMapping = finalCandidates[0];
                 console.log(`   [Mapped] EXACT: Found singular candidate -> ${finalMapping}`);
@@ -491,7 +489,7 @@ async function runScanInBackground(
                   if (aiResult) console.error("Full AI Result:", JSON.stringify(aiResult, null, 2));
                 }
               }
-              
+
               // Store in cache for subsequent instances of this alert
               if (routePattern) {
                 findingCache.set(routePattern, finalMapping);
@@ -500,29 +498,29 @@ async function runScanInBackground(
 
             // --- Storage Logic for Manual Review ---
             if (finalMapping) {
-                instance.source_file_path = finalMapping;
-                
-                if (savedFilesCount >= MAX_SAVED_FILES) {
-                    console.log(`   [Storage] Limit reached (${MAX_SAVED_FILES}). Skipping file copy for: ${path.basename(finalMapping)}`);
-                    continue;
-                }
+              instance.source_file_path = finalMapping;
 
-                try {
-                    const storageDir = path.join(process.cwd(), 'storage', 'original');
-                    if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+              if (savedFilesCount >= MAX_SAVED_FILES) {
+                console.log(`   [Storage] Limit reached (${MAX_SAVED_FILES}). Skipping file copy for: ${path.basename(finalMapping)}`);
+                continue;
+              }
 
-                    const alertClean = finding.alertName.replace(/[^a-z0-9]/gi, '_');
-                    const fileName = path.basename(finalMapping);
-                    const destPath = path.join(storageDir, `${alertClean}-${fileName}`);
-                    
-                    if (!fs.existsSync(destPath)) {
-                        fs.copyFileSync(finalMapping, destPath);
-                        savedFilesCount++;
-                        console.log(`   [Storage] Saved copy in: ${destPath} (${savedFilesCount}/${MAX_SAVED_FILES})`);
-                    }
-                } catch (copyErr) {
-                    console.error(`   [Storage] Failed to save copy: ${copyErr.message}`);
+              try {
+                const storageDir = path.join(process.cwd(), 'storage', 'original');
+                if (!fs.existsSync(storageDir)) fs.mkdirSync(storageDir, { recursive: true });
+
+                const alertClean = finding.alertName.replace(/[^a-z0-9]/gi, '_');
+                const fileName = path.basename(finalMapping);
+                const destPath = path.join(storageDir, `${alertClean}-${fileName}`);
+
+                if (!fs.existsSync(destPath)) {
+                  fs.copyFileSync(finalMapping, destPath);
+                  savedFilesCount++;
+                  console.log(`   [Storage] Saved copy in: ${destPath} (${savedFilesCount}/${MAX_SAVED_FILES})`);
                 }
+              } catch (copyErr) {
+                console.error(`   [Storage] Failed to save copy: ${copyErr.message}`);
+              }
             }
           }
         }

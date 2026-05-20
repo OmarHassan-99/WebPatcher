@@ -6,9 +6,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-/**
- * 1. نسخة العرض الجمالي (لليوزر أو للـ Debugging)
- */
+
 export const generateFileTreeVisual = (dirPath, prefix = '') => {
     let tree = '';
     if (!fs.existsSync(dirPath)) return '';
@@ -33,9 +31,7 @@ export const generateFileTreeVisual = (dirPath, prefix = '') => {
     return tree;
 };
 
-/**
- * 2. نسخة الـ AI (قائمة مسارات واضحة وموفرة للتوكنز)
- */
+
 export const generateFileTreeForAI = (dirPath, currentRelativePath = '') => {
     let paths = [];
     if (!fs.existsSync(dirPath)) return '';
@@ -49,7 +45,6 @@ export const generateFileTreeForAI = (dirPath, currentRelativePath = '') => {
         const relativePath = path.join(currentRelativePath, file);
 
         if (stats.isDirectory()) {
-            // ريكيرسيف لجلب الملفات داخل المجلدات
             const subPaths = generateFileTreeForAI(filePath, relativePath);
             if (subPaths) paths.push(...subPaths.split('\n'));
         } else {
@@ -62,16 +57,14 @@ export const generateFileTreeForAI = (dirPath, currentRelativePath = '') => {
 
 class RepoDownloader {
     constructor() {
-        // تحديد مكان التخزين المؤقت للمشاريع
+
         this.baseTempPath = path.join(__dirname, '..', '..', 'web_patcher_storage');
         if (!fs.existsSync(this.baseTempPath)) {
             fs.mkdirSync(this.baseTempPath, { recursive: true });
         }
     }
 
-    /**
-     * وظيفة تحميل الكود باستخدام Sparse Checkout لسرعة وكفاءة أعلى
-     */
+
     async downloadSourceCode(repoUrl, userId) {
         const jobId = `job_${userId}_${Date.now()}`;
         const targetDir = path.join(this.baseTempPath, jobId);
@@ -80,19 +73,19 @@ class RepoDownloader {
             fs.mkdirSync(targetDir, { recursive: true });
             const options = { cwd: targetDir, stdio: 'pipe' };
 
-            // تجهيز بيئة Git
+
             execSync('git init', options);
             execSync(`git remote add origin ${repoUrl}`, options);
             console.log("Initialized git repository and set remote.");
 
 
-            // تفعيل خاصية الـ Sparse Checkout
+
             execSync('git config core.sparseCheckout true', options);
 
-            // تحديد أنماط الملفات المطلوبة فقط (Source Code) واستبعاد الملفات الثقيلة
+
             const patterns = [
-                '/*.*',              // ملفات الـ Root (مثل package.json, index.js)
-                '/**/*.js',          // جميع ملفات البرمجة بمختلف الامتدادات
+                '/*.*',
+                '/**/*.js',
                 '/**/*.ts',
                 '/**/*.jsx',
                 '/**/*.tsx',
@@ -101,28 +94,27 @@ class RepoDownloader {
                 '/**/*.java',
                 '/**/*.go',
                 '/**/*.html',
-                '/**/web.config',    // ملفات الإعدادات الأمنية
+                '/**/web.config',
                 '/**/.htaccess',
-                '/src/**',           // المجلدات البرمجية الشائعة
+                '/src/**',
                 '/app/**',
                 '/routes/**',
                 '/controllers/**',
                 '/api/**',
-                '!/.git/**',         // استبعاد ملفات الـ Git الداخلية
-                '!/**/node_modules/**', // استبعاد المكتبات
-                '!/**/*.jpg',        // استبعاد الصور والميديا لتقليل الحجم
+                '!/.git/**',
+                '!/**/node_modules/**',
+                '!/**/*.jpg',
                 '!/**/*.png',
                 '!/**/*.mp4',
                 '!/**/*.pdf'
             ].join('\n');
 
-            // كتابة القواعد لـ Git
             fs.writeFileSync(path.join(targetDir, '.git', 'info', 'sparse-checkout'), patterns);
 
             console.log(`[RepoDownloader] Starting sparse download for User: ${userId}`);
 
-            // Try to detect default branch dynamically (works for any branch name),
-            // then fallback to common names.
+
+
             let branchCandidates = [];
             try {
                 const headSymref = execSync(`git ls-remote --symref "${repoUrl}" HEAD`, {
@@ -133,7 +125,7 @@ class RepoDownloader {
                     branchCandidates.push(match[1]);
                 }
             } catch {
-                // Ignore and fall back to defaults below
+
             }
 
             branchCandidates.push('main', 'master');
@@ -148,7 +140,7 @@ class RepoDownloader {
                     pulled = true;
                     break;
                 } catch {
-                    // Try next candidate branch
+
                 }
             }
 
@@ -164,7 +156,6 @@ class RepoDownloader {
 
         } catch (error) {
             console.error(`[RepoDownloader] Critical Error: ${error.message}`);
-            // تنظيف المجلد في حالة الفشل لتوفير المساحة
             if (fs.existsSync(targetDir)) {
                 fs.rmSync(targetDir, { recursive: true, force: true });
             }
