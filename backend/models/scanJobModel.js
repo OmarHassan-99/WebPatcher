@@ -5,6 +5,7 @@ const scanJobSchema = new mongoose.Schema(
     user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
     targetUrl: { type: String, required: true },
     githubRepoUrl: { type: String },
+    githubToken: { type: String },
     targetName: { type: String },
     previousScanId: {
       type: mongoose.Schema.Types.ObjectId,
@@ -65,7 +66,10 @@ const scanJobSchema = new mongoose.Schema(
       validatedAt: { type: Date },
     },
     schemathesis: {
-      status: { type: String, enum: ["pending", "running", "passed", "failed", "error"] },
+      status: {
+        type: String,
+        enum: ["pending", "running", "passed", "failed", "error"],
+      },
       reportPath: { type: String },
       exitCode: { type: Number },
       error: { type: String },

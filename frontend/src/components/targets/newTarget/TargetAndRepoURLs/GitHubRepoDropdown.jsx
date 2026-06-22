@@ -256,13 +256,10 @@ export default function GitHubRepoDropdown({ value, onChange, error }) {
                       initial={{
                         opacity: 0,
                         y: 10,
-                        // x: -5,
                       }}
                       animate={{ opacity: 1, y: 0, x: 0 }}
                       transition={{
                         type: "spring",
-                        // stiffness: 400,
-                        // damping: 30,
                         delay: i * 0.1,
                       }}
                       className={`relative w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-300 group overflow-hidden cursor-pointer border-b border-primary-900/30 ${
