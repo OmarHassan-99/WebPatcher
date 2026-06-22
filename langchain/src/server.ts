@@ -9,7 +9,7 @@ import { logger } from "../logging/logger";
 import type { ZapFinding } from "./types";
 
 const app = express();
-const PORT = 3001;
+const PORT = Number(process.env.LANGCHAIN_PORT) || 3004;
 
 
 app.use(cors());

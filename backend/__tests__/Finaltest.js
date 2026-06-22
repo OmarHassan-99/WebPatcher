@@ -21,7 +21,7 @@ async function runFullIntegrationTest() {
     };
 
     if (!testConfig.apiKey) {
-        console.error("❌ Error: OPENROUTER_API_KEY is missing in .env file");
+        console.error("❌ Error: OPENAI_API_KEY is missing in .env file");
         return;
     }
 
@@ -73,6 +73,7 @@ async function runFullIntegrationTest() {
             console.log(`📊 Confidence: ${result.confidence_score * 100}%`);
         } else {
             console.error("❌ Failed: AI could not make a clear decision.");
+            console.error("Full AI Result:", JSON.stringify(result, null, 2));
         }
 
         console.log("\n------------------------------------------");

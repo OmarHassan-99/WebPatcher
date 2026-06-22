@@ -1,5 +1,6 @@
 import ZapClient from "zaproxy";
 import axios from "axios";
+import { execSync } from "child_process";
 import ScanJob from "../models/scanJobModel.js";
 import { broadcastToUser, emitScanEvent } from "./socketService.js";
 import { configureAuthentication, cleanupAuth } from "./zapAuthService.js";
@@ -16,6 +17,100 @@ const zap = new ZapClient(zapOptions);
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Detect which browser/driver pair is available on PATH and return the
+ * ZAP AJAX Spider browser ID to use.
+ *
+ * Priority: firefox-headless → chrome-headless → htmlunit
+ * htmlunit has limited JS support but works without any installed browser.
+ */
+function detectAjaxBrowser() {
+  const isWin = process.platform === "win32";
+
+  function inPath(cmd) {
+    try {
+      execSync(isWin ? `where ${cmd}` : `which ${cmd}`, { stdio: "ignore" });
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  const hasGeckodriver = inPath(isWin ? "geckodriver.exe" : "geckodriver");
+  const hasFirefox = inPath(isWin ? "firefox.exe" : "firefox");
+  const hasChromedriver = inPath(isWin ? "chromedriver.exe" : "chromedriver");
+  const hasChrome =
+    inPath(isWin ? "chrome.exe" : "google-chrome") ||
+    inPath(isWin ? "chrome.exe" : "chromium-browser");
+
+  console.log(
+    `[ZapService] Browser detection — geckodriver:${hasGeckodriver} firefox:${hasFirefox} chromedriver:${hasChromedriver} chrome:${hasChrome}`,
+  );
+
+  if (hasGeckodriver && hasFirefox) {
+    console.log("[ZapService] AJAX Spider → firefox-headless");
+    return "firefox-headless";
+  }
+  if (hasChromedriver && hasChrome) {
+    console.log("[ZapService] AJAX Spider → chrome-headless");
+    return "chrome-headless";
+  }
+
+  console.warn(
+    "[ZapService] No real browser/driver found on PATH. " +
+    "Falling back to htmlunit — DOM XSS detection will be LIMITED. " +
+    "Install Firefox + geckodriver (or Chrome + chromedriver) and add both to PATH for full DOM analysis.",
+  );
+  return "htmlunit";
+}
+
+/**
+ * Fetch ZAP alerts with retry logic.
+ * ZAP may become temporarily unreachable after intensive scans (memory pressure,
+ * GC pauses, or delayed shutdown). This retries up to `maxRetries` times with
+ * a delay between attempts.
+ *
+ * @param {string} targetUrl - The base URL to filter alerts by
+ * @param {number} maxRetries - Maximum number of retry attempts
+ * @param {number} delayMs - Delay between retries in milliseconds
+ * @returns {Promise<Object>} Axios response
+ */
+async function fetchAlertsWithRetry(targetUrl, maxRetries = 3, delayMs = 5000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await axios.get(
+        "http://127.0.0.1:8080/JSON/alert/view/alerts/",
+        {
+          headers: { "X-ZAP-API-Key": zapOptions.apiKey },
+          params: {
+            baseurl: targetUrl,
+            start: 0,
+            count: 1000,
+          },
+          timeout: 15000, // 15 second timeout per attempt
+        },
+      );
+      return response;
+    } catch (err) {
+      const isLast = attempt === maxRetries;
+      const errMsg = err?.message || String(err);
+      console.warn(
+        `[ZapService] Alert fetch attempt ${attempt}/${maxRetries} failed: ${errMsg}`,
+      );
+
+      if (isLast) {
+        throw new Error(
+          `ZAP alert retrieval failed after ${maxRetries} attempts. ` +
+          `ZAP may have crashed or become unreachable. Last error: ${errMsg}`,
+        );
+      }
+
+      console.log(`[ZapService] Waiting ${delayMs / 1000}s before retry...`);
+      await sleep(delayMs);
+    }
+  }
 }
 
 /**
@@ -182,6 +277,10 @@ export async function runZapScanService(
       message: "AJAX Spider starting…",
     });
 
+    // Detect available browser and configure AJAX Spider accordingly
+    const ajaxBrowserId = detectAjaxBrowser();
+    await zap.ajaxSpider.setOptionBrowserId({ string: ajaxBrowserId });
+
     // Optimization: Drastically speed up the AJAX spider
     await zap.ajaxSpider.setOptionMaxDuration({ integer: 2 }); // 2 minutes max per crawl
     await zap.ajaxSpider.setOptionNumberOfBrowsers({ integer: 5 }); // 5 concurrent browsers
@@ -321,17 +420,7 @@ export async function runZapScanService(
 
   await sleep(3000);
 
-  const alerts = await axios.get(
-    "http://localhost:8080/JSON/alert/view/alerts/",
-    {
-      headers: { "X-ZAP-API-Key": zapOptions.apiKey },
-      params: {
-        baseurl: targetUrl,
-        start: 0,
-        count: 1000, // Safe batch limit
-      },
-    },
-  );
+  const alerts = await fetchAlertsWithRetry(targetUrl);
 
   // Cleanup authenticated context if it was used
   if (authContextId) {
@@ -339,4 +428,196 @@ export async function runZapScanService(
   }
 
   return { report: alerts.data };
+}
+
+// ─── Targeted ZAP Re-scan (for validation cycle) ─────────────────────────────
+
+/**
+ * Run a targeted ZAP active scan ONLY against the specific URLs found in
+ * the original findings.  Skips spidering entirely — we already know what
+ * endpoints to hit.
+ *
+ * @param {Object}  opts
+ * @param {string}  opts.targetUrl   - Base URL of the patched server (e.g. http://localhost:54321)
+ * @param {Array}   opts.findings    - Original ZAP findings (with instances[].uri)
+ * @param {string}  opts.scanJobId   - For logging / progress events
+ * @param {string}  opts.userId      - For socket broadcasts
+ * @returns {Promise<{ alerts: Array, success: boolean, error?: string }>}
+ */
+export async function runTargetedZapScan({ targetUrl, findings, scanJobId, userId }) {
+  console.log(`[ZapService] Starting TARGETED re-scan against: ${targetUrl}`);
+
+  try {
+    // Fresh session so we don't carry over old alerts
+    await zap.core.newSession({});
+    await zap.core.setMode({ mode: "attack" });
+
+    // ── Collect unique URLs from original findings ──────────────────────
+    const originalUrls = new Set();
+    for (const f of findings) {
+      for (const inst of f.instances || []) {
+        if (inst.uri) {
+          // Rebase the URL onto the patched server's origin
+          try {
+            const parsed = new URL(inst.uri);
+            const patchedParsed = new URL(targetUrl);
+            parsed.protocol = patchedParsed.protocol;
+            parsed.hostname = patchedParsed.hostname;
+            parsed.port = patchedParsed.port;
+            originalUrls.add(parsed.toString());
+          } catch {
+            // If URL parsing fails, try direct concat
+            const pathPart = inst.uri.replace(/^https?:\/\/[^/]+/, '');
+            originalUrls.add(`${targetUrl.replace(/\/$/, '')}${pathPart}`);
+          }
+        }
+      }
+    }
+
+    if (originalUrls.size === 0) {
+      console.warn('[ZapService] No URLs extracted from findings — nothing to re-scan.');
+      return { alerts: [], success: true };
+    }
+
+    console.log(`[ZapService] Targeted URLs (${originalUrls.size}):`);
+    for (const u of originalUrls) console.log(`   → ${u}`);
+
+    // ── Seed ZAP with those URLs (access them so they enter the Sites tree) ─
+    for (const url of originalUrls) {
+      try {
+        await zap.core.accessUrl({ url, followRedirects: true });
+      } catch (e) {
+        console.warn(`[ZapService] Could not seed URL ${url}: ${e?.message || e}`);
+      }
+    }
+    await sleep(2000);
+
+    // ── Active Scan only those URLs ─────────────────────────────────────
+    emitScanEvent(scanJobId, 'validation:stage', {
+      stage: 'zap_rescan',
+      message: `Running targeted ZAP active scan on ${originalUrls.size} URL(s)…`,
+    });
+
+    // Create / reuse Pen Test policy
+    try {
+      await zap.ascan.addScanPolicy({ scanpolicyname: "Pen Test" });
+    } catch { /* likely already exists */ }
+
+    await zap.ascan.updateScanPolicy({
+      scanpolicyname: "Pen Test",
+      attackstrength: "HIGH",
+      alertthreshold: "LOW",
+    });
+    await zap.ascan.enableAllScanners({ scanpolicyname: "Pen Test" });
+    await zap.ascan.setOptionThreadPerHost({ integer: 5 });
+
+    const ascanResponse = await zap.ascan.scan({
+      url: targetUrl,
+      scanpolicyname: "Pen Test",
+    });
+    const ascanId = ascanResponse.scan;
+
+    await pollWithTimeout(
+      async () => parseInt((await zap.ascan.status(ascanId)).status, 10),
+      (status) => status >= 100,
+      (status) => {
+        console.log(`[ZapService] Targeted re-scan progress: ${status}%`);
+        emitScanEvent(scanJobId, 'validation:stage', {
+          stage: 'zap_rescan',
+          message: `ZAP re-scan: ${status}%`,
+        });
+      },
+      15 * 60 * 1000, // 15 minute max for targeted scan
+      'Targeted Active Scan',
+    );
+
+    // ── Retrieve alerts ─────────────────────────────────────────────────
+    await sleep(2000);
+    const alertsResp = await fetchAlertsWithRetry(targetUrl);
+
+    const afterAlerts = alertsResp.data?.alerts || [];
+    console.log(`[ZapService] Targeted re-scan found ${afterAlerts.length} alert(s).`);
+
+    return { alerts: afterAlerts, success: true };
+  } catch (err) {
+    console.error('[ZapService] Targeted re-scan failed:', err?.message || err);
+    return { alerts: [], success: false, error: err?.message || String(err) };
+  }
+}
+
+// ─── ZAP Findings Comparison ─────────────────────────────────────────────────
+
+/**
+ * Compare original scan findings with the post-patch ZAP alerts.
+ *
+ * @param {Array} beforeFindings - Original findings from extractZapReport
+ * @param {Array} afterAlerts    - Raw ZAP alerts from the targeted re-scan
+ * @returns {{ mitigated: Array, remaining: Array, newAlerts: Array }}
+ */
+export function compareZapFindings(beforeFindings, afterAlerts) {
+  // Build a set of "after" alert signatures: "pluginId|alertName"
+  const afterSet = new Map();
+  for (const alert of afterAlerts) {
+    const key = `${alert.pluginId || '0'}|${(alert.name || '').toLowerCase()}`;
+    if (!afterSet.has(key)) {
+      afterSet.set(key, {
+        pluginId: alert.pluginId || '0',
+        alertName: alert.name || 'Unknown',
+        severity: alert.risk || 'Informational',
+        count: 0,
+        urls: [],
+      });
+    }
+    const entry = afterSet.get(key);
+    entry.count++;
+    if (alert.url && !entry.urls.includes(alert.url)) {
+      entry.urls.push(alert.url);
+    }
+  }
+
+  // Build a set of "before" finding signatures
+  const beforeKeys = new Set();
+  for (const f of beforeFindings) {
+    const key = `${f.pluginId || '0'}|${(f.alertName || '').toLowerCase()}`;
+    beforeKeys.add(key);
+  }
+
+  const mitigated = [];
+  const remaining = [];
+  const newAlerts = [];
+
+  // Check each original finding
+  for (const f of beforeFindings) {
+    const key = `${f.pluginId || '0'}|${(f.alertName || '').toLowerCase()}`;
+    if (afterSet.has(key)) {
+      remaining.push({
+        pluginId: f.pluginId,
+        alertName: f.alertName,
+        severity: f.severity,
+        beforeInstances: f.instances?.length || 0,
+        afterInstances: afterSet.get(key).count,
+      });
+    } else {
+      mitigated.push({
+        pluginId: f.pluginId,
+        alertName: f.alertName,
+        severity: f.severity,
+        instanceCount: f.instances?.length || 0,
+      });
+    }
+  }
+
+  // Check for brand-new alerts
+  for (const [key, entry] of afterSet) {
+    if (!beforeKeys.has(key)) {
+      newAlerts.push({
+        pluginId: entry.pluginId,
+        alertName: entry.alertName,
+        severity: entry.severity,
+        count: entry.count,
+      });
+    }
+  }
+
+  return { mitigated, remaining, newAlerts };
 }
