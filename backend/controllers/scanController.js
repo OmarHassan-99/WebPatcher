@@ -21,6 +21,7 @@ import ZapClient from "zaproxy";
 import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
 import UrlMapper from '../services/UrlMapper.js';
 import DecisionMaker from '../services/DecisionMaker.js';
+import pullRequst from '../services/pullRequestGithub.js';
 import { generateAndWriteOpenapiYaml } from "../services/openapiService.js";
 import { validateOpenapiWithSwaggerCli } from "../services/openapiValidationService.js";
 import {
@@ -78,53 +79,52 @@ export async function startZapScan(req, res) {
   const {
     url,
     targetName,
-     ,
     context,
     previousScanId,
     authConfig,
-} = req.body;
-const userId = req.session.user._id;
+  } = req.body;
+  const userId = req.session.user._id;
 
-try {
-  console.log(`[ScanController] Received request to scan URL: ${url}`);
-  console.log(
-    `[ScanController] GitHub repo URL: ${githubRepoUrl && String(githubRepoUrl).trim() !== ""
-      ? githubRepoUrl
-      : "(none)"
-    }`,
-  );
+  try {
+    console.log(`[ScanController] Received request to scan URL: ${url}`);
+    console.log(
+      `[ScanController] GitHub repo URL: ${githubRepoUrl && String(githubRepoUrl).trim() !== ""
+        ? githubRepoUrl
+        : "(none)"
+      }`,
+    );
 
-  if (previousScanId) {
-    // Hide the previous scan from the Target list UI
-    await ScanJob.findByIdAndUpdate(previousScanId, {
-      $set: { isHidden: true },
+    if (previousScanId) {
+      // Hide the previous scan from the Target list UI
+      await ScanJob.findByIdAndUpdate(previousScanId, {
+        $set: { isHidden: true },
+      });
+    }
+
+    const scan = await ScanJob.create({
+      user: req.session.user._id,
+      targetUrl: url,
+      githubRepoUrl,
+      targetName,
+      previousScanId,
+      context,
+      authConfig: authConfig || undefined,
     });
+
+    res.status(202).json({ scanJobId: scan._id.toString() });
+
+    broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
+    runScanInBackground(
+      url,
+      scan._id,
+      userId,
+      githubRepoUrl,
+      authConfig || null,
+    );
+  } catch (error) {
+    console.error("[ScanController] Failed to create scan job:", error);
+    res.status(500).json({ message: "Failed to start scan" });
   }
-
-  const scan = await ScanJob.create({
-    user: req.session.user._id,
-    targetUrl: url,
-    githubRepoUrl,
-    targetName,
-    previousScanId,
-    context,
-    authConfig: authConfig || undefined,
-  });
-
-  res.status(202).json({ scanJobId: scan._id.toString() });
-
-  broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-  runScanInBackground(
-    url,
-    scan._id,
-    userId,
-    githubRepoUrl,
-    authConfig || null,
-  );
-} catch (error) {
-  console.error("[ScanController] Failed to create scan job:", error);
-  res.status(500).json({ message: "Failed to start scan" });
-}
 }
 
 async function runScanInBackground(
@@ -835,6 +835,12 @@ async function generatePatchesInBackground(
           });
 
           console.log(`[ScanController] Validation cycle completed: ${validationResult.verdict}`);
+
+          //push the validation result to the client via pull request
+          const pr = new pullRequst(token);
+          pr.createPatchAndPR(repoPath, repoOwner, repoName, BranchName);
+
+
         } catch (validationErr) {
           console.error(`[ScanController] Validation cycle failed: ${validationErr.message}`);
           await ScanJob.findByIdAndUpdate(scanJobId, {
