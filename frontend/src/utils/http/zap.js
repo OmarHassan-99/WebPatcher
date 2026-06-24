@@ -4,17 +4,25 @@ export async function validateTargetAndRepoURLs({
   csrfToken,
   targetURL,
   githubRepoUrl,
+  githubToken,
 }) {
   try {
     const response = await api.post(
       "api/scans/validateTarget&RepoURLs",
-      { targetURL, githubRepoUrl },
+      { targetURL, githubRepoUrl, githubToken },
       { headers: { "x-csrf-token": csrfToken } },
     );
     return response.data;
   } catch (error) {
     if (error.response && error.response.data?.errors) {
-      throw { isValidationError: true, errors: error.response.data.errors };
+      const { isRepoChecked } = error.response.data;
+      throw {
+        isValidationError: true,
+        errors: error.response.data.errors,
+        owner: isRepoChecked?.owner,
+        repoName: isRepoChecked?.repoName,
+        errorType: isRepoChecked?.errorType,
+      };
     }
     throw new Error(error.response?.data?.message || error.message);
   }
@@ -25,6 +33,7 @@ export async function startZapScan({
   url,
   targetName,
   githubRepoUrl,
+  githubToken,
   context,
   previousScanId,
   authConfig,
@@ -32,7 +41,15 @@ export async function startZapScan({
   try {
     const response = await api.post(
       "/api/scans/startScan",
-      { url, targetName, githubRepoUrl, context, previousScanId, authConfig },
+      {
+        url,
+        targetName,
+        githubRepoUrl,
+        githubToken,
+        context,
+        previousScanId,
+        authConfig,
+      },
       {
         headers: { "x-csrf-token": csrfToken },
       },

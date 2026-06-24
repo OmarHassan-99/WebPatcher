@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Github,
   Tag,
+  KeyRound,
 } from "lucide-react";
 import CheckField from "./CheckField";
 import LockButton from "../../../../react-bits/LockButton";
@@ -231,6 +232,28 @@ export default function TargetAndRepoURLs({
               </Motion.div>
             </div>
           )}
+        </div>
+
+        {/* GitHub Personal Access Token (PAT) Input */}
+        <div className="overflow-hidden">
+          <div className="pt-5">
+            <CustomTargetInput
+              label="GitHub Personal Access Token (PAT)"
+              span="(For pushing patches)"
+              name="githubToken"
+              leftIcon={KeyRound}
+              value={formData.githubToken}
+              onChange={(e) => {
+                updateField("githubToken", e.target.value);
+                if (error?.githubToken)
+                  setError((prev) => ({ ...prev, githubToken: "" }));
+              }}
+              placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+              error={error?.githubToken}
+              isAnimatePulse={isAnimatePulse}
+              isGitHubToken={true}
+            />
+          </div>
         </div>
 
         {/* Glowing Divider */}

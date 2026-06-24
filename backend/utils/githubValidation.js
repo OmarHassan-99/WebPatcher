@@ -1,6 +1,7 @@
 import { App } from "octokit";
 import { request } from "@octokit/request";
 import validator from "validator";
+import axios from "axios";
 
 const app = new App({
   appId: process.env.GITHUB_APP_ID,
@@ -54,5 +55,48 @@ export async function validateRepo(repoUrl) {
       console.error("GitHub App Check Error:", privateError);
       return { valid: false, message: "Error validating repository access" };
     }
+  }
+}
+
+export async function validateGitHubToken(token, owner, repo) {
+  try {
+    const response = await axios.get(
+      `https://api.github.com/repos/${owner}/${repo}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: "application/vnd.github.v3+json",
+        },
+      },
+    );
+
+    const permissions = response.data.permissions;
+
+    if (!permissions.push) {
+      return {
+        valid: false,
+        message: `Your token does not have push access to ${owner}/${repo}.`,
+        owner,
+        repo,
+        errorType: "NO_PUSH_ACCESS",
+      };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    if (error.response && error.response.status === 404) {
+      return {
+        valid: false,
+        message:
+          "Repository not found or access denied. If this is a private repository, ensure your GitHub token has the 'repo' scope checked.",
+      };
+    }
+    if (error.response && error.response.status === 401) {
+      return {
+        valid: false,
+        message: "Invalid GitHub token provided. It may be expired or revoked.",
+      };
+    }
+    return { valid: false, message: "Failed to validate token." };
   }
 }

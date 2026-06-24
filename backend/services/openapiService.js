@@ -31,17 +31,29 @@ function makeRelativePath(repoPath, fullPath) {
   return path.relative(repoPath, fullPath).replace(/\\/g, "/");
 }
 
-function pickSnippetAroundMatch(content, needleRegex, maxBefore = 2000, maxAfter = 4500) {
+function pickSnippetAroundMatch(
+  content,
+  needleRegex,
+  maxBefore = 2000,
+  maxAfter = 4500,
+) {
   const match = content.match(needleRegex);
   if (!match || match.index === undefined) {
     return content.slice(0, maxBefore + maxAfter);
   }
   const start = Math.max(0, match.index - maxBefore);
-  const end = Math.min(content.length, match.index + match[0].length + maxAfter);
+  const end = Math.min(
+    content.length,
+    match.index + match[0].length + maxAfter,
+  );
   return content.slice(start, end);
 }
 
-export function collectCandidateSnippets(repoPath, maxCandidateFiles = 12, maxScannedFiles = 200) {
+export function collectCandidateSnippets(
+  repoPath,
+  maxCandidateFiles = 12,
+  maxScannedFiles = 200,
+) {
   const keywordsRegexes = [
     /(express\.Router)/i,
     /(router\.(get|post|put|delete|patch)\s*\()/i,
@@ -143,18 +155,14 @@ export async function generateAndWriteOpenapiYaml({
   targetUrl,
   maxCandidateFiles = 12,
 }) {
-  const apiKey = process.env.OPENROUTER_API_KEY || process.env.OPENAI_API_KEY;
+  const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     throw new Error(
-      "Missing LLM API key. Set OPENROUTER_API_KEY (recommended) in backend/.env",
+      "Missing LLM API key. Set OPENAI_API_KEY (recommended) in backend/.env",
     );
   }
 
-  const candidates = collectCandidateSnippets(
-    repoPath,
-    maxCandidateFiles,
-    220,
-  );
+  const candidates = collectCandidateSnippets(repoPath, maxCandidateFiles, 220);
 
   // Minimal “structure” so the model understands the project context.
   // We purposely keep it small to reduce tokens.
@@ -176,8 +184,7 @@ ${projectHint}
 CANDIDATE FILE SNIPPETS
 ${candidates
   .map(
-    (c, i) =>
-      `FILE ${i + 1}: ${c.relativePath}\nSNIPPET:\n${c.snippet}\n----`,
+    (c, i) => `FILE ${i + 1}: ${c.relativePath}\nSNIPPET:\n${c.snippet}\n----`,
   )
   .join("\n")}
 
@@ -214,4 +221,3 @@ Return the YAML content only.
 
   return { outputPath, yamlText };
 }
-

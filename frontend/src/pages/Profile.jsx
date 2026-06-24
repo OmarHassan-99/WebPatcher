@@ -227,10 +227,7 @@ export default function ProfilePage() {
             {showField === "dangerZone" && (
               <DangerZoneSection
                 key="dangerZone"
-                user={user}
-                isSubmittingUnlink={isSubmittingUnlink}
                 isDeleting={isDeleting}
-                onUnlinkGitHub={handleUnlinkGitHub}
                 onDeleteClick={() => setShowDeleteModal(true)}
               />
             )}

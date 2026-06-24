@@ -1,14 +1,11 @@
-import { lazy, Suspense, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useRouteLoaderData } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
 import { ExternalLink } from "lucide-react";
 import Stepper, { Step } from "../react-bits/Stepper";
 import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
 import useCsrf from "../hooks/useCsrf";
-const TargetAndRepoURLs = lazy(
-  () =>
-    import("../components/targets/newTarget/TargetAndRepoURLs/Target&RepoURLs"),
-);
+import TargetAndRepoURLs from "../components/targets/newTarget/TargetAndRepoURLs/Target&RepoURLs";
 import AuthContext from "../components/targets/newTarget/Authentication/AuthContext";
 import AiContext from "../components/targets/newTarget/AIContext/AiContext";
 import { generateTargetSlug } from "../utils/slugify";
@@ -33,11 +30,16 @@ export default function NewTargetPage() {
     targetUrl: "",
     githubRepoUrl: "",
     targetName: "",
+    githubToken: "",
     context: { db: [], lang: [], fw: [], os: [], scm: [], ws: [] },
     authConfig: { ...DEFAULT_AUTH_CONFIG },
     isChecked: false,
   });
-  const [error, setError] = useState({ targetUrl: "", githubRepoUrl: "" });
+  const [error, setError] = useState({
+    targetUrl: "",
+    githubRepoUrl: "",
+    githubToken: "",
+  });
   const [isAnimatePulse, setIsAnimatePulse] = useState(true);
   const [activeScanJobId, setActiveScanJobId] = useState(null);
 
@@ -52,7 +54,7 @@ export default function NewTargetPage() {
   const { mutate: startScanMutate } = useMutation({ mutationFn: startZapScan });
 
   async function handleUrlsValidation() {
-    setError({ targetUrl: "", githubRepoUrl: "" });
+    setError({ targetUrl: "", githubRepoUrl: "", githubToken: "" });
     setIsAnimatePulse(true);
 
     try {
@@ -60,6 +62,7 @@ export default function NewTargetPage() {
         csrfToken,
         targetURL: formData.targetUrl,
         githubRepoUrl: formData.githubRepoUrl,
+        githubToken: formData.githubToken,
       });
       return true;
     } catch (err) {
@@ -84,9 +87,71 @@ export default function NewTargetPage() {
           );
         }
 
+        if (newErrors.githubToken && err.errorType === "NO_PUSH_ACCESS") {
+          setIsAnimatePulse(false);
+          newErrors.githubToken = (
+            <div className="flex flex-col gap-2 mt-1 text-sm text-red-400">
+              <p>
+                <strong>Push Access Denied.</strong> To fix this:
+              </p>
+              <ul className="list-disc list-inside ml-2 text-gray-300">
+                <li>
+                  <strong>If you own this repo:</strong> Ensure your GitHub
+                  token has the{" "}
+                  <code className="bg-black px-1 rounded text-green-400">
+                    repo
+                  </code>{" "}
+                  scope checked.
+                </li>
+                <li>
+                  <strong>If this is an external repo:</strong> You must{" "}
+                  <a
+                    href={`https://github.com/${err.owner}/${err.repo}/fork`}
+                    target="_blank"
+                    className="text-blue-400 underline"
+                  >
+                    Fork it on GitHub
+                  </a>{" "}
+                  first, then scan your forked version instead.
+                </li>
+              </ul>
+            </div>
+          );
+        } else if (
+          newErrors.githubToken &&
+          newErrors.githubToken?.includes("'repo' scope")
+        ) {
+          setIsAnimatePulse(false);
+          newErrors.githubToken = (
+            <span className="flex flex-col items-start gap-1">
+              <span>Repository not found or access denied.</span>
+              <span className="text-gray-300">
+                Ensure your token has the{" "}
+                <code className="bg-black px-1 rounded text-green-400">
+                  repo
+                </code>{" "}
+                scope checked.
+              </span>
+              <a
+                href="https://github.com/settings/tokens"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 underline hover:text-blue-300 flex items-center gap-1 mt-1"
+              >
+                Check your token settings here
+                <ExternalLink className="size-4" />
+              </a>
+            </span>
+          );
+        }
+
         setError(newErrors);
       } else {
-        setError({ targetUrl: err.message, githubRepoUrl: err.message });
+        setError({
+          targetUrl: err.message,
+          githubRepoUrl: err.message,
+          githubToken: err.message,
+        });
       }
       return false;
     }
@@ -104,6 +169,7 @@ export default function NewTargetPage() {
         url: formData.targetUrl,
         targetName: formData.targetName,
         githubRepoUrl: formData.githubRepoUrl,
+        githubToken: formData.githubToken,
         context: formData.context,
         authConfig: authPayload,
       },
@@ -174,16 +240,14 @@ export default function NewTargetPage() {
           isNextDisabled={!formData.targetUrl.trim() || !formData.isChecked}
           isPending={isPendingValidation}
         >
-          <Suspense fallback={null}>
-            <TargetAndRepoURLs
-              formData={formData}
-              updateField={updateField}
-              error={error}
-              setError={setError}
-              isAnimatePulse={isAnimatePulse}
-              user={user}
-            />
-          </Suspense>
+          <TargetAndRepoURLs
+            formData={formData}
+            updateField={updateField}
+            error={error}
+            setError={setError}
+            isAnimatePulse={isAnimatePulse}
+            user={user}
+          />
         </Step>
 
         <Step stepLabel="Authentication">
