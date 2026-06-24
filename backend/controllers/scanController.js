@@ -21,15 +21,13 @@ import { emitScanEvent, broadcastToUser } from "../services/socketService.js";
 import { testAuthentication } from "../services/zapAuthService.js";
 import ZapClient from "zaproxy";
 
-import RepoDownloader, { generateFileTreeForAI } from '../services/githubService.js';
-import UrlMapper from '../services/UrlMapper.js';
-import DecisionMaker from '../services/DecisionMaker.js';
 import pullRequst from '../services/pullRequestGithub.js';
 import RepoDownloader, {
   generateFileTreeForAI,
 } from "../services/githubService.js";
 import UrlMapper from "../services/UrlMapper.js";
 import DecisionMaker from "../services/DecisionMaker.js";
+
 import { generateAndWriteOpenapiYaml } from "../services/openapiService.js";
 import { validateOpenapiWithSwaggerCli } from "../services/openapiValidationService.js";
 import {
@@ -45,7 +43,7 @@ import {
 } from "../services/zapManagerService.js";
 import path from "path";
 import fs from "fs";
-import { encryptToken } from "../utils/crypto.js";
+import { encryptToken, decryptToken } from "../utils/crypto.js";
 
 export async function validateTargetAndRepoURLs(req, res) {
   try {
@@ -177,6 +175,7 @@ export async function startZapScan(req, res) {
       userId,
       githubRepoUrl,
       authConfig || null,
+      encryptedToken,
     );
   } catch (error) {
     console.error("[ScanController] Failed to create scan job:", error);
@@ -190,6 +189,7 @@ async function runScanInBackground(
   userId,
   githubRepoUrl,
   authConfig = null,
+  encryptedToken = null,
 ) {
   let openapiTask = Promise.resolve(null);
   try {
@@ -799,6 +799,8 @@ async function runScanInBackground(
       openapiFilePath,
       beforeHarPath,
       url,
+      githubRepoUrl,
+      encryptedToken,
     );
   } catch (error) {
     console.error("[ScanController] Background scan error:", error);
@@ -837,6 +839,8 @@ async function generatePatchesInBackground(
   openapiPath = null,
   beforeHarPath = null,
   targetUrl = null,
+  githubRepoUrl = null,
+  encryptedToken = null,
 ) {
   try {
     // Check if LangChain API is running
@@ -1002,15 +1006,40 @@ async function generatePatchesInBackground(
 
           console.log(`[ScanController] Validation cycle completed: ${validationResult.verdict}`);
 
-          //push the validation result to the client via pull request
-          const pr = new pullRequst(token);
-          pr.createPatchAndPR(repoPath, repoOwner, repoName, BranchName);
+          // Create PR only if validation passed (valid or warning — not failed/invalid/error)
+          if (
+            (validationResult.verdict === "valid" || validationResult.verdict === "warning") &&
+            repoPath &&
+            githubRepoUrl &&
+            encryptedToken
+          ) {
+            try {
+              const match = githubRepoUrl
+                .trim()
+                .replace(/\.git$/, "")
+                .match(/github\.com\/([^/]+)\/([^/]+)/);
 
+              if (match) {
+                const owner = match[1];
+                const repoName = match[2];
+                const branchName = `security-patch-${scanJobId}`;
+                const rawToken = decryptToken(encryptedToken);
 
-          console.log(
-            `[ScanController] Validation cycle completed: ${validationResult.verdict}`,
-          );
-        } catch (validationErr) {
+                const pr = new pullRequst(rawToken);
+                const prUrl = await pr.createPatchAndPR(repoPath, owner, repoName, branchName);
+                console.log(`[ScanController] PR created: ${prUrl}`);
+
+                await ScanJob.findByIdAndUpdate(scanJobId, {
+                  $set: { pullRequestUrl: prUrl },
+                });
+              }
+            } catch (prErr) {
+              console.error(`[ScanController] PR creation failed: ${prErr.message}`);
+            }
+          }
+
+        }
+        catch (validationErr) {
           console.error(
             `[ScanController] Validation cycle failed: ${validationErr.message}`,
           );
@@ -1026,6 +1055,8 @@ async function generatePatchesInBackground(
         }
       }
       // ── END VALIDATION CYCLE ──────────────────────────────────────
+
+
 
       await ScanJob.findByIdAndUpdate(scanJobId, {
         $set: { status: "completed", finishedAt: Date.now() },

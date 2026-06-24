@@ -4,6 +4,7 @@ import path from 'path';
 
 class PRService {
     constructor(token) {
+        this.token = token;
         this.octokit = new Octokit({ auth: token });
     }
 
@@ -11,6 +12,10 @@ class PRService {
         const options = { cwd: repoPath };
 
         try {
+            // Authenticate git push against GitHub (required for private repos).
+            const authedRemote = `https://x-access-token:${this.token}@github.com/${repoOwner}/${repoName}.git`;
+            execSync(`git remote set-url origin ${authedRemote}`, options);
+
             console.log(` Creating new branch: ${branchName}`);
 
             execSync(`git checkout -b ${branchName}`, options);
