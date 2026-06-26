@@ -15,7 +15,7 @@ const SplitText = ({
     hidden: { opacity: 0 },
     visible: (i = 1) => ({
       opacity: 1,
-      transition: { staggerChildren: delay / 1000, delayChildren: 0.04 * i },
+      transition: { staggerChildren: delay / 1000, delayChildren: 0.02 * i },
     }),
   };
 
@@ -24,8 +24,8 @@ const SplitText = ({
       ...to,
       transition: {
         type: "spring",
-        damping: 12,
-        stiffness: 100,
+        damping: 20,
+        stiffness: 200,
         duration: duration,
       },
     },
@@ -39,8 +39,7 @@ const SplitText = ({
       style={{ display: "inline-block", overflow: "hidden" }}
       variants={container}
       initial="hidden"
-      whileInView="visible"
-      viewport={{ once: true, amount: 0.2 }}
+      animate="visible"
       className={className}
       onAnimationComplete={onLetterAnimationComplete}
     >

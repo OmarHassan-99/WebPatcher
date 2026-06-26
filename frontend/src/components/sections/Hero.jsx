@@ -14,7 +14,7 @@ export default function Hero() {
       <Motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, type: "spring", stiffness: 60 }}
+        transition={{ delay: 0.05, type: "spring", stiffness: 150, damping: 20 }}
         className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-400/10 border border-primary-400/20 text-primary-100 text-sm font-medium mb-8"
       >
         <Shield size={14} className="text-primary-200" />
@@ -44,7 +44,7 @@ export default function Hero() {
       <Motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.45, type: "spring", stiffness: 50, damping: 18 }}
+        transition={{ delay: 0.25, type: "spring", stiffness: 150, damping: 22 }}
         className="mt-5 text-base sm:text-lg text-surface-300 max-w-xl leading-relaxed bg-[#0a0a0a]/60 backdrop-blur-md p-4 rounded-xl border border-white/10"
       >
         <ShinyText
@@ -60,7 +60,7 @@ export default function Hero() {
       <Motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.65, type: "spring", stiffness: 50, damping: 18 }}
+        transition={{ delay: 0.4, type: "spring", stiffness: 150, damping: 22 }}
         className="flex flex-wrap items-center justify-center gap-4 mt-9"
       >
         <Link
@@ -88,7 +88,7 @@ export default function Hero() {
       <Motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 0.9, duration: 0.6 }}
+        transition={{ delay: 0.55, duration: 0.4 }}
         className="mt-6 text-xs text-surface-400"
       >
         Powered by OWASP ZAP · AI-Driven Security · GitHub Integration

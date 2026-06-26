@@ -181,136 +181,161 @@ export default function TargetDetailsPage() {
             className={`flex flex-col w-full ${!fromNewTarget && "mt-8"}`}
           >
             {status === "failed" ? (
-              <StageView
-                animation={ErrorLottieAnimation}
-                text="Target Scan Failed"
-                subtext="Something went wrong during the scanning process."
-                failed
-                loop={false}
-                noPulse
-              />
-            ) : (
-              <div className="flex flex-col items-center">
-                <Lottie
-                  animationData={SuccessLottieAnimation}
-                  className="h-32"
+              <div className="flex flex-col items-center pb-8">
+                <StageView
+                  animation={ErrorLottieAnimation}
+                  text="Target Scan Failed"
+                  subtext="Something went wrong during the scanning process."
+                  failed={false}
                   loop={false}
+                  noPulse
                 />
-                <h2 className="text-2xl font-bold mb-1">Scan Complete</h2>
-                <p className="text-gray-300">
-                  Found{" "}
-                  <span className="font-bold text-red-400">
-                    <CountUp
-                      from={0}
-                      to={findings.length}
-                      className="font-bold text-red-400"
+                <div className="mt-6 flex items-center gap-4">
+                  <Link
+                    to="/targets"
+                    state={{ page: state?.page || 1 }}
+                    className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 rounded-full transition flex items-center gap-2 font-medium"
+                  >
+                    <ArrowLeft size={18} /> Back to Targets
+                  </Link>
+
+                  <button
+                    onClick={handleRerun}
+                    disabled={isRerunning}
+                    className="group inline-flex items-center gap-2 px-6 py-2.5 rounded-full font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(16,185,129,0.25)] cursor-pointer disabled:cursor-progress"
+                  >
+                    <RefreshCw
+                      size={18}
+                      className={`transition-transform duration-500 ${isRerunning ? "animate-spin text-white" : "group-hover:rotate-180 text-emerald-500"}`}
                     />
-                  </span>{" "}
-                  potential vulnerabilities
-                </p>
+                    <ShinyText text={isRerunning ? "Initiating..." : "Re-run Scan"} />
+                  </button>
+                </div>
               </div>
-            )}
-
-            <Motion.div
-              layout
-              className="relative flex items-center justify-center mt-6 mb-2 px-4"
-            >
-              <Motion.div layout className="flex">
-                <Link
-                  to="/targets"
-                  state={{ page: state?.page || 1 }}
-                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(255,255,255,0.15)]"
-                >
-                  <ArrowLeft
-                    size={15}
-                    className="transition-transform duration-300 group-hover:-translate-x-1"
+            ) : (
+              <>
+                <div className="flex flex-col items-center">
+                  <Lottie
+                    animationData={SuccessLottieAnimation}
+                    className="h-32"
+                    loop={false}
                   />
-                  Back to Targets
-                </Link>
-              </Motion.div>
+                  <h2 className="text-2xl font-bold mb-1">Scan Complete</h2>
+                  <p className="text-gray-300">
+                    Found{" "}
+                    <span className="font-bold text-red-400">
+                      <CountUp
+                        from={0}
+                        to={findings.length}
+                        className="font-bold text-red-400"
+                      />
+                    </span>{" "}
+                    potential vulnerabilities
+                  </p>
+                </div>
 
-              {/* Tabs */}
-              <Motion.div
-                layout
-                initial={{ opacity: 0, scale: 0.8, y: -20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{
-                  type: "spring",
-                  delay: 0.4,
-                }}
-                className="inline-flex gap-1 p-1 mx-4 rounded-2xl bg-transparent backdrop-blur-md border border-white/8 shadow-xl"
-              >
-                <TabSwitcher
-                  activeTab={activeTab}
-                  setActiveTab={setActiveTab}
-                  vulnsCount={findings.length}
-                  recsCount={recsCount}
-                  showCompareTab={showCompareTab}
-                />
-              </Motion.div>
-
-              {/* Re-run Button */}
-              {(status === "completed" || status === "failed") && (
-                <Motion.button
+                <Motion.div
                   layout
-                  onClick={handleRerun}
-                  disabled={isRerunning}
-                  className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(16,185,129,0.25)] cursor-pointer disabled:cursor-progress"
+                  className="relative flex items-center justify-center mt-6 mb-2 px-4"
                 >
-                  <RefreshCw
-                    size={15}
-                    className={`transition-transform duration-500 ${isRerunning ? "animate-spin text-white" : "group-hover:rotate-180 text-emerald-500"}`}
-                  />
-                  <ShinyText
-                    text={isRerunning ? "Initiating..." : "Re-run Scan"}
-                  />
-                </Motion.button>
-              )}
-            </Motion.div>
+                  <Motion.div layout className="flex">
+                    <Link
+                      to="/targets"
+                      state={{ page: state?.page || 1 }}
+                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white bg-white/5 hover:bg-white/10 border border-white/8 hover:border-white/20 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(255,255,255,0.15)]"
+                    >
+                      <ArrowLeft
+                        size={15}
+                        className="transition-transform duration-300 group-hover:-translate-x-1"
+                      />
+                      Back to Targets
+                    </Link>
+                  </Motion.div>
 
-            {/* Tab panels */}
-            <AnimatePresence mode={recsCount > 0 ? "popLayout" : "wait"}>
-              {activeTab === "vulnerabilities" ? (
-                <Motion.div
-                  key="vulnerabilities"
-                  variants={FADE_VARIANTS}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                >
-                  <VulnerabilitiesPanel findings={findings} />
+                  {/* Tabs */}
+                  <Motion.div
+                    layout
+                    initial={{ opacity: 0, scale: 0.8, y: -20 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{
+                      type: "spring",
+                      delay: 0.4,
+                    }}
+                    className="inline-flex gap-1 p-1 mx-4 rounded-2xl bg-transparent backdrop-blur-md border border-white/8 shadow-xl"
+                  >
+                    <TabSwitcher
+                      activeTab={activeTab}
+                      setActiveTab={setActiveTab}
+                      vulnsCount={findings.length}
+                      recsCount={recsCount}
+                      showCompareTab={showCompareTab}
+                    />
+                  </Motion.div>
+
+                  {/* Re-run Button */}
+                  {status === "completed" && (
+                    <Motion.button
+                      layout
+                      onClick={handleRerun}
+                      disabled={isRerunning}
+                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(16,185,129,0.25)] cursor-pointer disabled:cursor-progress"
+                    >
+                      <RefreshCw
+                        size={15}
+                        className={`transition-transform duration-500 ${isRerunning ? "animate-spin text-white" : "group-hover:rotate-180 text-emerald-500"}`}
+                      />
+                      <ShinyText
+                        text={isRerunning ? "Initiating..." : "Re-run Scan"}
+                      />
+                    </Motion.button>
+                  )}
                 </Motion.div>
-              ) : activeTab === "recommendations" ? (
-                <Motion.div
-                  key="recommendations"
-                  variants={FADE_VARIANTS}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="py-6 px-4"
-                >
-                  <RecommendationsPanel
-                    scanId={targetId}
-                    csrfToken={csrfToken}
-                    onCountReady={handleCountReady}
-                  />
-                </Motion.div>
-              ) : (
-                <Motion.div
-                  key="compare"
-                  variants={FADE_VARIANTS}
-                  initial="hidden"
-                  animate="visible"
-                  exit="exit"
-                  className="py-6 px-4"
-                >
-                  <ComparePanel
-                    currentScan={{ ...currentScanData, findings }}
-                    csrfToken={csrfToken}
-                  />
-                </Motion.div>
-              )}
-            </AnimatePresence>
+
+                {/* Tab panels */}
+                <AnimatePresence mode={recsCount > 0 ? "popLayout" : "wait"}>
+                  {activeTab === "vulnerabilities" ? (
+                    <Motion.div
+                      key="vulnerabilities"
+                      variants={FADE_VARIANTS}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                    >
+                      <VulnerabilitiesPanel findings={findings} />
+                    </Motion.div>
+                  ) : activeTab === "recommendations" ? (
+                    <Motion.div
+                      key="recommendations"
+                      variants={FADE_VARIANTS}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="py-6 px-4"
+                    >
+                      <RecommendationsPanel
+                        scanId={targetId}
+                        csrfToken={csrfToken}
+                        onCountReady={handleCountReady}
+                      />
+                    </Motion.div>
+                  ) : (
+                    <Motion.div
+                      key="compare"
+                      variants={FADE_VARIANTS}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="py-6 px-4"
+                    >
+                      <ComparePanel
+                        currentScan={{ ...currentScanData, findings }}
+                        csrfToken={csrfToken}
+                      />
+                    </Motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            )}
           </Motion.div>
         )}
       </AnimatePresence>
