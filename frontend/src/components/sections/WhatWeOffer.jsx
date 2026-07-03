@@ -6,10 +6,10 @@ import SpotlightCard from "../../react-bits/SpotlightCard";
 export default function WhatWeOffer() {
   return (
     <Motion.section
-      initial={{ opacity: 0, y: 50 }}
+      initial={{ opacity: 0, y: 30 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ amount: 0.2, once: true }}
-      transition={{ type: "spring", stiffness: 50 }}
+      viewport={{ amount: 0.15, once: true }}
+      transition={{ type: "spring", stiffness: 120, damping: 20 }}
       className="py-16"
     >
       <div className="mx-auto text-center">
@@ -30,13 +30,14 @@ export default function WhatWeOffer() {
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mx-6">
           {FEATURES.map((f, i) => (
             <Motion.div
-              initial={{ opacity: 0, y: 50 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ amount: 0.2, once: true }}
+              viewport={{ amount: 0.15, once: true }}
               transition={{
                 type: "spring",
-                stiffness: 50,
-                delay: i * 0.15,
+                stiffness: 150,
+                damping: 22,
+                delay: i * 0.08,
               }}
               key={i}
             >
@@ -49,6 +50,7 @@ export default function WhatWeOffer() {
                   animationData={f.animation}
                   loop
                   autoplay
+                  rendererSettings={{ preserveAspectRatio: "xMidYMid slice" }}
                 />
                 <h3 className="text-xl text-white font-semibold">{f.title}</h3>
                 <p className="text-primary-100 mt-2">{f.desc}</p>

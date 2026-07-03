@@ -6,10 +6,10 @@ export default function Footer() {
 
   return (
     <Motion.footer
-      initial={{ opacity: 0, y: -20 }}
+      initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ amount: 0.2, once: true }}
-      transition={{ type: "spring" }}
+      viewport={{ amount: 0.5, once: true }}
+      transition={{ type: "spring", stiffness: 140, damping: 22, duration: 0.5 }}
       className="w-full border-t border-white/10 px-5 py-7 text-primary-200 overflow-hidden"
     >
       <div className="flex items-center justify-between">
