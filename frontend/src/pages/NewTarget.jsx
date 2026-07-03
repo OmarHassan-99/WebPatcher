@@ -6,24 +6,11 @@ import Stepper, { Step } from "../react-bits/Stepper";
 import { startZapScan, validateTargetAndRepoURLs } from "../utils/http/zap";
 import useCsrf from "../hooks/useCsrf";
 import TargetAndRepoURLs from "../components/targets/newTarget/TargetAndRepoURLs/Target&RepoURLs";
-import AuthContext from "../components/targets/newTarget/Authentication/AuthContext";
 import AiContext from "../components/targets/newTarget/AIContext/AiContext";
 import { generateTargetSlug } from "../utils/slugify";
 
 const GITHUB_INSTALL_URL =
   "https://github.com/apps/webpatcher-ai-powered-assistant/installations/new";
-
-const DEFAULT_AUTH_CONFIG = {
-  enabled: false,
-  loginUrl: "",
-  usernameField: "username",
-  passwordField: "password",
-  username: "",
-  password: "",
-  loggedInIndicator: "",
-  loggedOutIndicator: "",
-  extraPostData: "",
-};
 
 export default function NewTargetPage() {
   const [formData, setFormData] = useState({
@@ -32,7 +19,6 @@ export default function NewTargetPage() {
     targetName: "",
     githubToken: "",
     context: { db: [], lang: [], fw: [], os: [], scm: [], ws: [] },
-    authConfig: { ...DEFAULT_AUTH_CONFIG },
     isChecked: false,
   });
   const [error, setError] = useState({
@@ -158,11 +144,6 @@ export default function NewTargetPage() {
   }
 
   function handleStartScan() {
-    // Only include authConfig if actually enabled
-    const authPayload = formData.authConfig.enabled
-      ? formData.authConfig
-      : undefined;
-
     startScanMutate(
       {
         csrfToken,
@@ -171,7 +152,6 @@ export default function NewTargetPage() {
         githubRepoUrl: formData.githubRepoUrl,
         githubToken: formData.githubToken,
         context: formData.context,
-        authConfig: authPayload,
       },
       {
         onSuccess: (data) => {
@@ -196,13 +176,6 @@ export default function NewTargetPage() {
 
   function updateField(name, value) {
     setFormData((prev) => ({ ...prev, [name]: value }));
-  }
-
-  function updateAuthConfig(field, value) {
-    setFormData((prev) => ({
-      ...prev,
-      authConfig: { ...prev.authConfig, [field]: value },
-    }));
   }
 
   function updateAiContext(name, value) {
@@ -247,14 +220,6 @@ export default function NewTargetPage() {
             setError={setError}
             isAnimatePulse={isAnimatePulse}
             user={user}
-          />
-        </Step>
-
-        <Step stepLabel="Authentication">
-          <AuthContext
-            formData={formData}
-            updateAuthConfig={updateAuthConfig}
-            targetUrl={formData.targetUrl}
           />
         </Step>
 
