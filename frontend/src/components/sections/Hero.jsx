@@ -10,16 +10,6 @@ export default function Hero() {
 
   return (
     <section className="relative flex flex-col items-center justify-center text-center px-6 pt-20 pb-10 overflow-hidden">
-      {/* Floating badge */}
-      <Motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.05, type: "spring", stiffness: 150, damping: 20 }}
-        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-primary-400/10 border border-primary-400/20 text-primary-100 text-sm font-medium mb-8"
-      >
-        <Shield size={14} className="text-primary-200" />
-        AI-Powered Vulnerability Scanning & Patching
-      </Motion.div>
 
       {/* Headline with animated gradient */}
       <div className="text-4xl sm:text-5xl lg:text-6xl font-extrabold leading-tight tracking-tight max-w-3xl">
@@ -45,14 +35,14 @@ export default function Hero() {
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.25, type: "spring", stiffness: 150, damping: 22 }}
-        className="mt-5 text-base sm:text-lg text-surface-300 max-w-xl leading-relaxed bg-[#0a0a0a]/60 backdrop-blur-md p-4 rounded-xl border border-white/10"
+        className="mt-5 text-base sm:text-lg text-surface-300 max-w-xl leading-relaxed"
       >
         <ShinyText
-          text="WebPatcher scans your web applications with OWASP ZAP, leverages AI to generate precise fix recommendations, and auto-creates GitHub pull requests — all in one seamless workflow."
+          text="WebPatcher scans your web applications for vulnerabilities, leverages AI to generate precise fix recommendations, and auto-creates GitHub pull requests — all in one seamless workflow."
           speed={3}
           className="w-full"
-          color="#94a3b8"
-          shineColor="#ffffff"
+          color="var(--color-surface-400)"
+          shineColor="var(--color-surface-100)"
         />
       </Motion.div>
 
@@ -91,7 +81,7 @@ export default function Hero() {
         transition={{ delay: 0.55, duration: 0.4 }}
         className="mt-6 text-xs text-surface-400"
       >
-        Powered by OWASP ZAP · AI-Driven Security · GitHub Integration
+
       </Motion.p>
     </section>
   );

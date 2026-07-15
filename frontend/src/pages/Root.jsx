@@ -7,6 +7,7 @@ import {
 import MainNavigation from "../components/layout/MainNavigation";
 import LightRays from "../react-bits/LightRays";
 import Dock from "../react-bits/Dock";
+import BotPatcher from "../components/ui/BotPatcher";
 import { DOCK_ITEMS } from "../data/constants";
 import useGitHubToast from "../hooks/useGitHubToast";
 import { lazy, Suspense, useEffect, useRef } from "react";
@@ -156,6 +157,7 @@ export default function RootPage() {
       </Suspense>
 
       <div className="fixed bottom-0 w-full z-50">
+        <BotPatcher />
         {user && (
           <Dock
             items={DOCK_ITEMS}

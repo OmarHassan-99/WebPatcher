@@ -11,6 +11,7 @@ export default function VulnerabilitiesPanel({ findings }) {
     severityFilter: "All",
     sortOption: "None",
     expandAll: false,
+    searchQuery: "",
   });
 
   const groupedFindings = useMemo(() => {
@@ -18,6 +19,15 @@ export default function VulnerabilitiesPanel({ findings }) {
 
     if (filters.severityFilter !== "All") {
       data = data.filter((f) => f.severity === filters.severityFilter);
+    }
+
+    if (filters.searchQuery) {
+      const q = filters.searchQuery.toLowerCase();
+      data = data.filter((f) => 
+        f.name.toLowerCase().includes(q) || 
+        f.description?.toLowerCase().includes(q) || 
+        f.pluginId?.toString().includes(q)
+      );
     }
 
     return computeGroupedFindings(data, filters.sortOption);

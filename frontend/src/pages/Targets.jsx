@@ -12,6 +12,7 @@ import DeleteConfirmationModal from "../components/targets/DeleteConfirmationMod
 import ScansPagination from "../components/targets/ScansPagination";
 import TargetsStandardHeader from "../components/targets/TargetsStandardHeader";
 import TargetsBulkHeader from "../components/targets/TargetsBulkHeader";
+import TargetsSummaryStats from "../components/targets/TargetsSummaryStats";
 import EmptyList from "../components/targets/EmptyList";
 import { useLocation } from "react-router-dom";
 
@@ -96,6 +97,8 @@ export default function TargetsPage() {
   return (
     <>
       <div className="w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 space-y-8 mt-5">
+        <TargetsSummaryStats scans={scans} />
+        
         <AnimatePresence mode="popLayout">
           <Motion.div
             key={selectedIds.size > 0 ? "bulk" : "standard"}

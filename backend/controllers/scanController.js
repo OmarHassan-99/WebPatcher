@@ -1,7 +1,7 @@
 import ScanJob from "../models/scanJobModel.js";
 import ScanReport from "../models/ScanReportModel.js";
 import ScanRecommendation from "../models/ScanRecommendationModel.js";
-//import queue from "../services/queue.js";
+import { publishScanJob, isQueueAvailable } from "../services/queueService.js";
 import { validateUrl } from "../utils/validator.js";
 import { isHostReachable } from "../utils/network.js";
 import {
@@ -169,19 +169,37 @@ export async function startZapScan(req, res) {
     res.status(202).json({ scanJobId: scan._id.toString() });
 
     broadcastToUser(userId, "scan:created", { scanJobId: scan._id.toString() });
-    runScanInBackground(
-      url,
-      scan._id,
-      userId,
-      githubRepoUrl,
-      authConfig || null,
-      encryptedToken,
-    );
+
+    // Try to publish to RabbitMQ queue first; fall back to in-process execution
+    const queued = isQueueAvailable()
+      ? await publishScanJob(scan._id, {
+        url,
+        userId,
+        githubRepoUrl,
+        authConfig: authConfig || null,
+        encryptedToken,
+      })
+      : false;
+
+    if (!queued) {
+      console.log("[ScanController] RabbitMQ unavailable, running scan in-process");
+      runScanInBackground(
+        url,
+        scan._id,
+        userId,
+        githubRepoUrl,
+        authConfig || null,
+        encryptedToken,
+      );
+    }
   } catch (error) {
     console.error("[ScanController] Failed to create scan job:", error);
     res.status(500).json({ message: "Failed to start scan" });
   }
 }
+
+// Exported for use by the scan worker
+export { runScanInBackground as runScanInBackgroundFromWorker };
 
 async function runScanInBackground(
   url,

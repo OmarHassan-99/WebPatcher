@@ -1,5 +1,6 @@
 import "./config/env.js";
 import express from "express";
+import mongoose from "mongoose";
 import cors from "cors";
 import http from "http";
 import MongoStore from "connect-mongo";
@@ -9,10 +10,12 @@ import { doubleCsrf } from "csrf-csrf";
 import connectDB from "./config/db.js";
 import { resetStalledScans } from "./services/cleanupService.js";
 import { initSocketIO } from "./services/socketService.js";
+import { initQueue } from "./services/queueService.js";
 
 import userRouter from "./routes/userRoute.js";
 import scanRouter from "./routes/scanRoutes.js";
 import recommendationRouter from "./routes/recommendationRoutes.js";
+import chatRouter from "./routes/chatRoutes.js";
 
 const FRONT_END_ORIGIN = process.env.FRONT_END_ORIGIN;
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -35,7 +38,9 @@ app.use(cookieParser());
 
 await connectDB();
 
-const store = MongoStore.create({ mongoUrl: MONGODB_URI });
+const store = MongoStore.create({
+  client: mongoose.connection.getClient()
+});
 
 app.use(
   session({
@@ -72,6 +77,7 @@ app.get("/api/csrf-token", (req, res) => {
 app.use("/auth", userRouter);
 app.use("/api/scans", scanRouter);
 app.use("/api/recommendations", recommendationRouter);
+app.use("/api/chat", chatRouter);
 app.use(doubleCsrfProtection);
 
 app.use((err, req, res, next) => {
@@ -84,5 +90,8 @@ app.use((err, req, res, next) => {
 });
 
 await resetStalledScans();
+
+// Initialize RabbitMQ (best-effort — app works without it)
+await initQueue();
 
 httpServer.listen(PORT, () => console.log("Server started on port " + PORT));

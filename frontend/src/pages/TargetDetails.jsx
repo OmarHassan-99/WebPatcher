@@ -14,12 +14,13 @@ import StageView from "../components/targets/targetDetails/StageView";
 import VulnerabilitiesPanel from "../components/targets/targetDetails/vulnerabilities/VulnerabilitiesPanel";
 import RecommendationsPanel from "../components/targets/targetDetails/recommendations/RecommendationsPanel";
 import TabSwitcher from "../components/targets/targetDetails/TabSwitcher";
+import StatisticsPanel from "../components/targets/targetDetails/statistics/StatisticsPanel";
 import ScanProgressPanel from "../components/targets/scanProgressPanel/ScanProgressPanel";
 import CountUp from "../react-bits/CountUp";
 import { startZapScan } from "../utils/http/zap";
 import ComparePanel from "../components/targets/targetDetails/compare/ComparePanel";
 import toast from "react-hot-toast";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
 import ShinyText from "../react-bits/ShinyText";
 import { generateTargetSlug, extractIdFromSlug } from "../utils/slugify";
 
@@ -272,22 +273,36 @@ export default function TargetDetailsPage() {
                     />
                   </Motion.div>
 
-                  {/* Re-run Button */}
+                  {/* Actions */}
                   {status === "completed" && (
-                    <Motion.button
-                      layout
-                      onClick={handleRerun}
-                      disabled={isRerunning}
-                      className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(16,185,129,0.25)] cursor-pointer disabled:cursor-progress"
-                    >
-                      <RefreshCw
-                        size={15}
-                        className={`transition-transform duration-500 ${isRerunning ? "animate-spin text-white" : "group-hover:rotate-180 text-emerald-500"}`}
-                      />
-                      <ShinyText
-                        text={isRerunning ? "Initiating..." : "Re-run Scan"}
-                      />
-                    </Motion.button>
+                    <Motion.div layout className="flex items-center gap-2 px-4">
+                      <Motion.button
+                        layout
+                        onClick={() => window.print()}
+                        className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-blue-400 hover:text-white bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 hover:border-blue-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(59,130,246,0.25)] cursor-pointer"
+                      >
+                        <Download
+                          size={15}
+                          className="transition-transform duration-300 group-hover:-translate-y-0.5"
+                        />
+                        <span className="font-semibold tracking-wide">Export PDF</span>
+                      </Motion.button>
+
+                      <Motion.button
+                        layout
+                        onClick={handleRerun}
+                        disabled={isRerunning}
+                        className="group inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium text-emerald-400 hover:text-white bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 hover:border-emerald-500/40 backdrop-blur-sm shadow-inner transition-all duration-300 hover:shadow-[0_0_16px_-4px_rgba(16,185,129,0.25)] cursor-pointer disabled:cursor-progress"
+                      >
+                        <RefreshCw
+                          size={15}
+                          className={`transition-transform duration-500 ${isRerunning ? "animate-spin text-white" : "group-hover:rotate-180 text-emerald-500"}`}
+                        />
+                        <ShinyText
+                          text={isRerunning ? "Initiating..." : "Re-run Scan"}
+                        />
+                      </Motion.button>
+                    </Motion.div>
                   )}
                 </Motion.div>
 
@@ -316,6 +331,20 @@ export default function TargetDetailsPage() {
                         scanId={targetId}
                         csrfToken={csrfToken}
                         onCountReady={handleCountReady}
+                      />
+                    </Motion.div>
+                  ) : activeTab === "statistics" ? (
+                    <Motion.div
+                      key="statistics"
+                      variants={FADE_VARIANTS}
+                      initial="hidden"
+                      animate="visible"
+                      exit="exit"
+                      className="py-6 px-4"
+                    >
+                      <StatisticsPanel
+                        findings={findings}
+                        scan={currentScanData}
                       />
                     </Motion.div>
                   ) : (

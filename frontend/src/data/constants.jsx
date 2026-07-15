@@ -7,7 +7,7 @@ import AiProcessorLottieAnimation from "../lottie/Ai Processor.json";
 import SuccessLottieAnimation from "../lottie/Success.json";
 import ErrorLottieAnimation from "../lottie/Error Occurred!.json";
 
-import { Home, ShieldAlert, Sparkles, Target, User, ArrowLeftRight } from "lucide-react";
+import { Home, ShieldAlert, Sparkles, Target, User, ArrowLeftRight, BarChart3, BookOpen } from "lucide-react";
 
 export const FEATURES = [
   {
@@ -22,24 +22,29 @@ export const FEATURES = [
   },
   {
     title: "Seamless Scanner Integration",
-    desc: "Works with OWASP ZAP reports directly, parsing and analyzing vulnerabilities automatically.",
+    desc: "Parses and analyzes vulnerability scan reports automatically with intelligent classification.",
     animation: lottie3,
   },
 ];
 
 export const DOCK_ITEMS = [
   {
-    icon: <Home size={18} color="white" />,
+    icon: <Home size={18} className="text-white" />,
     label: "Home",
     path: "/",
   },
   {
-    icon: <Target size={18} color="white" />,
+    icon: <Target size={18} className="text-white" />,
     label: "Targets",
     path: "/targets",
   },
   {
-    icon: <User size={18} color="white" />,
+    icon: <BookOpen size={18} className="text-white" />,
+    label: "Info",
+    path: "/info",
+  },
+  {
+    icon: <User size={18} className="text-white" />,
     label: "Profile",
     path: "/profile",
   },
@@ -209,11 +214,12 @@ export const STATUS_OPTIONS = [
 export const TABS = [
   { id: "vulnerabilities", label: "Vulnerabilities", icon: ShieldAlert },
   { id: "recommendations", label: "AI Recommendations", icon: Sparkles },
+  { id: "statistics", label: "Statistics", icon: BarChart3 },
   { id: "compare", label: "Compare", icon: ArrowLeftRight },
 ];
 
 export const STAGES = [
-  { key: "init", label: "Init", desc: "Preparing ZAP session" },
+  { key: "init", label: "Init", desc: "Preparing scan session" },
   { key: "spider", label: "Spider", desc: "Mapping pages & endpoints" },
   {
     key: "ajax_spider",

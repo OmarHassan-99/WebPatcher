@@ -92,7 +92,7 @@ export default function AuthForm({
             <div className="space-y-6">
               <AuthField
                 label="Logged-In Indicator"
-                tooltip='Regex pattern ZAP looks for to confirm it is logged in (e.g. "Logout")'
+                tooltip='Regex pattern the scanner looks for to confirm it is logged in (e.g. "Logout")'
                 value={auth.loggedInIndicator}
                 onChange={(v) => update("loggedInIndicator", v)}
                 placeholder="Logout|Dashboard|Welcome"

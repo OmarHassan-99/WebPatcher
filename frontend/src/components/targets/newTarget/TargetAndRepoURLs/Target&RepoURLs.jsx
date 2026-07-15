@@ -87,9 +87,8 @@ export default function TargetAndRepoURLs({
               {/* Mode toggle pill */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-y-3">
                 <label
-                  className={`text-sm font-bold tracking-wide transition-colors duration-300 flex items-center ${
-                    error.githubRepoUrl ? "text-red-400" : "text-white"
-                  }`}
+                  className={`text-sm font-bold tracking-wide transition-colors duration-300 flex items-center ${error.githubRepoUrl ? "text-red-400" : "text-white"
+                    }`}
                 >
                   GitHub Repository
                   <AnimatePresence mode="wait">
@@ -99,11 +98,10 @@ export default function TargetAndRepoURLs({
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -6 }}
                       transition={{ duration: 0.3 }}
-                      className={`text-xs ml-3 font-medium px-2 py-0.5 rounded shadow-inner ${
-                        error.githubRepoUrl
+                      className={`text-xs ml-3 font-medium px-2 py-0.5 rounded shadow-inner ${error.githubRepoUrl
                           ? "bg-red-500/10 text-red-300"
                           : "bg-primary-500/10 text-primary-300"
-                      }`}
+                        }`}
                     >
                       {!manualMode ? "List Select" : "Manual Entry"}
                     </Motion.span>
@@ -136,10 +134,9 @@ export default function TargetAndRepoURLs({
                       onClick={mode.action}
                       className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs
                         font-bold tracking-wide transition-all duration-300 z-10 cursor-pointer
-                        ${
-                          mode.active
-                            ? "text-black shadow-sm"
-                            : "text-gray-400 hover:text-white hover:bg-white/5"
+                        ${mode.active
+                          ? "text-black shadow-sm"
+                          : "text-gray-400 hover:text-white hover:bg-white/5"
                         }`}
                     >
                       {mode.active && (
@@ -294,9 +291,8 @@ export default function TargetAndRepoURLs({
                 />
               </div>
               <span
-                className={`text-sm font-semibold tracking-wide transition-colors duration-500 ${
-                  formData.isChecked ? "text-emerald-400" : "text-gray-400"
-                }`}
+                className={`text-sm font-semibold tracking-wide transition-colors duration-500 ${formData.isChecked ? "text-emerald-400" : "text-gray-400"
+                  }`}
               >
                 I confirm that I have the legal authorization to scan this
                 target

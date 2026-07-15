@@ -14,6 +14,7 @@ import NewTargetPage from "./pages/NewTarget";
 import NotFoundPage from "./pages/NotFound";
 import ErrorPage from "./pages/Error";
 import TargetDetailsPage from "./pages/TargetDetails";
+import InfoPage from "./pages/Info";
 
 function App() {
   const router = createBrowserRouter([
@@ -37,6 +38,10 @@ function App() {
           path: "profile",
           element: <ProfilePage />,
           loader: checkAuthLoader,
+        },
+        {
+          path: "info",
+          element: <InfoPage />,
         },
         {
           path: "targets",

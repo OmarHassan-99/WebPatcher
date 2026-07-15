@@ -1,17 +1,33 @@
 @import url('https://fonts.googleapis.com/css2?family=plus+jakarta+sans:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 
+/* ═══════════════════════════════════════════════════════════════
+   THEME VARIABLES — only used for body background & text-main
+   ═══════════════════════════════════════════════════════════════ */
+:root {
+  --bg-main: #030014;
+  --text-main: #ffffff;
+}
+
+
+
 html {
   scrollbar-width: thin;
-
-  /* First color is the thumb, second color is the track */
   scrollbar-color: var(--color-surface-700) var(--color-surface-950);
 }
 
+
+
 body {
-  background-color: #030014;
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   @theme — STATIC dark-mode hex values for Tailwind v4 resolution
+   These MUST be static so Tailwind can resolve them at build time.
+   ═══════════════════════════════════════════════════════════════ */
 @theme {
   --color-primary-100: #C77DFF;
   --color-primary-200: #9D4EDD;
@@ -41,7 +57,6 @@ body {
       opacity: 0;
       transform: translateY(20px);
     }
-
     to {
       opacity: 1;
       transform: translateY(0);
@@ -51,6 +66,9 @@ body {
   --animate-fade-in-up: fade-in-up 0.6s ease-out forwards;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   DARK MODE UTILITIES (default)
+   ═══════════════════════════════════════════════════════════════ */
 @layer utilities {
   .glass-panel {
     @apply backdrop-blur-xl bg-white/5 border border-white/10 shadow-xl;
@@ -86,13 +104,44 @@ body {
 }
 
 @keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
 
-  0%,
-  100% {
-    background-position: 0% 50%;
+@media print {
+  /* Hide interactive elements and UI clutter */
+  nav, button, [role="toolbar"], .toast, .lucide-refresh-cw {
+    display: none !important;
+  }
+  
+  /* Reset background and colors for clean PDF */
+  body, html, main, #root {
+    background: #ffffff !important;
+    color: #0f172a !important;
+  }
+  
+  /* Remove background decorations */
+  .fixed.-z-10 {
+    display: none !important;
   }
 
-  50% {
-    background-position: 100% 50%;
+  /* Make panels print-friendly */
+  .glass-panel, .glass-card, .border-white\/8, .bg-white\/5 {
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Fix text colors */
+  .text-white, .text-gray-300, .text-gray-400, .text-surface-300 {
+    color: #0f172a !important;
+  }
+  
+  /* Ensure charts print correctly */
+  svg {
+    max-width: 100%;
   }
 }

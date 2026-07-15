@@ -18,7 +18,7 @@ export default function TabSwitcher({
     const count =
       id === "recommendations"
         ? recsCount
-        : id === "compare"
+        : id === "compare" || id === "statistics"
           ? null
           : vulnsCount;
     return (

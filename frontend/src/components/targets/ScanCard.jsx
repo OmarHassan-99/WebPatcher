@@ -111,10 +111,9 @@ export default function ScanCard({ scan, isSelected, onToggle, page = 1 }) {
           className={`
             group relative h-full flex flex-col justify-between
             rounded-3xl transition-all duration-500 overflow-hidden
-            ${
-              isSelected
-                ? "ring-2 ring-primary-500 bg-surface-900/90 shadow-2xl shadow-primary-500/20"
-                : "glass-card hover:shadow-2xl hover:shadow-primary-500/10 hover:border-primary-500/30"
+            ${isSelected
+              ? "ring-2 ring-primary-500 bg-surface-900/90 shadow-2xl shadow-primary-500/20"
+              : "glass-card hover:shadow-2xl hover:shadow-primary-500/10 hover:border-primary-500/30"
             }
           `}
         >
@@ -193,12 +192,11 @@ export default function ScanCard({ scan, isSelected, onToggle, page = 1 }) {
                 <div
                   className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider shadow-lg
                     ${GET_STATUS_COLOR(scan.status)}
-                    ${
-                      scan.status === "running" ||
+                    ${scan.status === "running" ||
                       scan.status === "analyzing" ||
                       scan.status === "patching"
-                        ? "animate-pulse"
-                        : ""
+                      ? "animate-pulse"
+                      : ""
                     }
                   `}
                 >
@@ -234,11 +232,10 @@ export default function ScanCard({ scan, isSelected, onToggle, page = 1 }) {
             <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
               <div className="flex items-center gap-4">
                 <div
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${
-                    scan.findingsCount > 0
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${scan.findingsCount > 0
                       ? "bg-red-500/10 border-red-500/20 text-red-200"
                       : "bg-emerald-500/10 border-emerald-500/20 text-emerald-200"
-                  }`}
+                    }`}
                 >
                   <ShieldAlert size={14} />
                   <span className="font-bold text-sm">

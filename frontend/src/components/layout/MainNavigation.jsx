@@ -3,6 +3,7 @@ import { AnimatePresence, motion as Motion } from "motion/react";
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
 import CustomLink from "../ui/CustomLink";
+
 import { useMutation } from "@tanstack/react-query";
 import { logout } from "../../utils/http/userAuth";
 import toast from "react-hot-toast";
@@ -53,6 +54,7 @@ export default function MainNavigation() {
           <p className="text-white font-bold text-lg">WebPatcher</p>
         </Motion.div>
       </Link>
+      
 
       {/* Desktop links */}
       <div className="hidden sm:flex font-semibold">

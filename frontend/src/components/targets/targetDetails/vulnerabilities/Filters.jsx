@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, Filter } from "lucide-react";
+import { ArrowDown, ArrowUp, Filter, Search } from "lucide-react";
 import FilterPill from "../FilterPill";
 import { SEVERITY_FILTER } from "../../../../data/constants";
 
@@ -11,6 +11,21 @@ export default function Filters({ filters, setFilters }) {
         <Filter className="size-5 text-primary-100" />
         <span className="font-semibold text-primary-100">Filters</span>
       </div>
+
+      <div className="relative flex items-center bg-white/5 border border-white/10 rounded-full px-3 py-1.5 focus-within:border-primary-400 focus-within:bg-white/10 transition-colors group">
+        <Search className="size-4 text-gray-400 group-focus-within:text-primary-300" />
+        <input
+          type="text"
+          placeholder="Search finding name, description..."
+          value={filters.searchQuery || ""}
+          onChange={(e) =>
+            setFilters((prev) => ({ ...prev, searchQuery: e.target.value }))
+          }
+          className="bg-transparent border-none outline-none text-white text-sm ml-2 w-48 sm:w-64 placeholder-gray-500"
+        />
+      </div>
+
+      <div className="h-px w-full sm:w-px sm:h-6 bg-white mx-1" />
 
       <div className="flex gap-1 sm:gap-2 flex-wrap">
         {SEVERITY_FILTER.map((sev) => (

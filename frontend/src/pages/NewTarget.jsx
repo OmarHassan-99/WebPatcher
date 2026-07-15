@@ -182,19 +182,19 @@ export default function NewTargetPage() {
     setFormData((prev) =>
       prev.context[name].includes(value)
         ? {
-            ...prev,
-            context: {
-              ...prev.context,
-              [name]: prev.context[name].filter((item) => item !== value),
-            },
-          }
-        : {
-            ...prev,
-            context: {
-              ...prev.context,
-              [name]: [...prev.context[name], value],
-            },
+          ...prev,
+          context: {
+            ...prev.context,
+            [name]: prev.context[name].filter((item) => item !== value),
           },
+        }
+        : {
+          ...prev,
+          context: {
+            ...prev.context,
+            [name]: [...prev.context[name], value],
+          },
+        },
     );
   }
 

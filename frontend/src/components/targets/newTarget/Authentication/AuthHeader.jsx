@@ -5,7 +5,7 @@ export default function AuthHeader() {
         Authenticated Scanning
       </h2>
       <p className="text-primary-100 text-sm max-w-lg mx-auto leading-relaxed">
-        Enhance your security audit by providing credentials. This allows ZAP to
+        Enhance your security audit by providing credentials. This allows the scanner to
         crawl and scan protected areas of your application.
       </p>
     </div>
